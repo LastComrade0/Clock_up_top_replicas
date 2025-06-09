@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
 function createWindow() {
@@ -21,6 +21,11 @@ function createWindow() {
   
   // Remove menu bar
   win.setMenuBarVisibility(false);
+
+  // Handle close message from renderer
+  ipcMain.on('close-app', () => {
+    win.close();
+  });
 }
 
 app.whenReady().then(() => {
