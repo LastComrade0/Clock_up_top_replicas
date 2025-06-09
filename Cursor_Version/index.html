@@ -35,13 +35,10 @@
             align-items: center;
             justify-content: center;
         }
-        #close-button {
+        .button {
             position: absolute;
-            top: 3px;
-            right: 3px;
             width: 18px;
             height: 18px;
-            background: #ff4444;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -55,14 +52,25 @@
             transition: opacity 0.2s;
             line-height: 1;
         }
-        #close-button:hover {
+        .button:hover {
             opacity: 1;
+        }
+        #close-button {
+            top: 3px;
+            right: 3px;
+            background: #ff4444;
+        }
+        #minimize-button {
+            top: 3px;
+            right: 25px;
+            background: #ffbb00;
         }
     </style>
 </head>
 <body>
     <div id="clock">
-        <div id="close-button">×</div>
+        <div id="close-button" class="button">×</div>
+        <div id="minimize-button" class="button">−</div>
     </div>
     <script src="renderer.js"></script>
 </body>
