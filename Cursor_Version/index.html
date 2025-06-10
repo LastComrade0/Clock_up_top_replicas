@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Clock up Top</title>
     <style>
         * {
@@ -8,70 +9,200 @@
             padding: 0;
             box-sizing: border-box;
         }
-        html {
-            overflow: hidden;
-        }
-        body {
-            background: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            -webkit-app-region: drag;
-            user-select: none;
-            overflow: hidden;
-            width: 280px;
-            height: 90px;
-        }
-        #clock {
-            font-size: 42px;
-            color: #333;
-            text-align: center;
-            padding: 15px 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            position: relative;
+
+        html, body {
             width: 100%;
             height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: transparent;
+            overflow: hidden;
         }
-        .button {
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            -webkit-app-region: drag;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #clock {
+            font-size: 40px;
+            font-weight: 300;
+            color: #000;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px 40px;
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            -webkit-app-region: no-drag;
-            color: white;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            min-width: 240px;
+            margin-bottom: 10px;
+        }
+
+        /* Top-right buttons */
+        .window-button {
+            position: absolute;
+            top: 6px;
+            width: 20px;
+            height: 20px;
+            color: rgba(0, 0, 0, 0.6);
             font-size: 14px;
             font-weight: bold;
-            opacity: 0.8;
-            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-app-region: no-drag;
+            cursor: pointer;
+            opacity: 0.9;
             line-height: 1;
         }
-        .button:hover {
-            opacity: 1;
-        }
+
         #close-button {
-            top: 3px;
-            right: 3px;
-            background: #ff4444;
+            right: 6px;
         }
+
         #minimize-button {
-            top: 3px;
-            right: 25px;
-            background: #ffbb00;
+            right: 30px;
+        }
+
+        .window-button:hover {
+            opacity: 1;
+            color: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Arrow Button */
+        #menu-arrow {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            -webkit-app-region: no-drag;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        #menu-arrow.flipped {
+            transform: rotate(180deg);
+        }
+
+        #menu-arrow::before {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(0, 0, 0, 0.6);
+            transition: transform 0.3s ease;
+        }
+
+        #content-area {
+            width: 480px;
+            height: 100px;
+            background: rgba(33, 33, 33, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: none;
+            padding: 15px;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin: 0 10px;
+            box-sizing: border-box;
+        }
+
+        #content-area.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #content-area h2 {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        #content-area p {
+            color: #b0b0b0;
+            margin-bottom: 8px;
         }
     </style>
 </head>
 <body>
     <div id="clock">
-        <div id="close-button" class="button">×</div>
-        <div id="minimize-button" class="button">−</div>
+        <span id="time">--:--</span>
+
+        <div id="close-button" class="window-button">×</div>
+        <div id="minimize-button" class="window-button">−</div>
+
+        <div id="menu-arrow"></div>
     </div>
-    <script src="renderer.js"></script>
+
+    <div id="content-area">
+        <!-- Content will be added here -->
+    </div>
+
+    <script>
+        const timeEl = document.getElementById('time');
+        const arrow = document.getElementById('menu-arrow');
+        const contentArea = document.getElementById('content-area');
+        const closeButton = document.getElementById('close-button');
+        const minimizeButton = document.getElementById('minimize-button');
+
+        function updateTime() {
+            const now = new Date();
+            timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Arrow click handler
+        arrow.addEventListener('click', () => {
+            arrow.classList.toggle('flipped');
+            contentArea.classList.toggle('show');
+            if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.send('toggle-content');
+            }
+        });
+
+        // Close button click handler
+        closeButton.addEventListener('click', () => {
+            if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.send('close-app');
+            }
+        });
+
+        // Minimize button click handler
+        minimizeButton.addEventListener('click', () => {
+            if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.send('minimize-app');
+            }
+        });
+    </script>
 </body>
-</html> 
+</html>
+

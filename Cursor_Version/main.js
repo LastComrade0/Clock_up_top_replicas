@@ -3,21 +3,23 @@ const path = require('path');
 
 let tray = null;
 let mainWindow = null;
+let isExpanded = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 280,
-    height: 90,
-    frame: false,
+    width: 300,
+    height: 100,
     transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    useContentSize: true,
-    skipTaskbar: true,
+    frame: false,
+    backgroundColor: '#00000000',
+    hasShadow: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    alwaysOnTop: true,
+    skipTaskbar: true
   });
 
   mainWindow.loadFile('index.html');
@@ -35,21 +37,47 @@ function createWindow() {
       label: 'Show Clock', 
       click: () => {
         mainWindow.show();
-        mainWindow.setAlwaysOnTop(true, 'screen-saver');
       }
     },
     { 
       label: 'Hide Clock', 
-      click: () => mainWindow.hide()
+      click: () => {
+        mainWindow.hide();
+      }
     },
     { type: 'separator' },
     { 
-      label: 'Quit', 
-      click: () => app.quit()
+      label: 'Exit', 
+      click: () => {
+        app.quit();
+      }
     }
   ]);
   tray.setToolTip('Clock up Top');
   tray.setContextMenu(contextMenu);
+
+  // Handle tray icon click
+  tray.on('click', () => {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+    }
+  });
+
+  // Handle window close
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+    return false;
+  });
+
+  // Handle app quit
+  app.on('before-quit', () => {
+    app.isQuitting = true;
+  });
 
   // Handle close message from renderer
   ipcMain.on('close-app', () => {
@@ -59,6 +87,16 @@ function createWindow() {
   // Handle minimize message from renderer
   ipcMain.on('minimize-app', () => {
     mainWindow.hide();
+  });
+
+  // Handle content toggle
+  ipcMain.on('toggle-content', () => {
+    isExpanded = !isExpanded;
+    if (isExpanded) {
+      mainWindow.setSize(480, 220);
+    } else {
+      mainWindow.setSize(300, 100);
+    }
   });
 
   // Keep window on top
@@ -76,9 +114,6 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
-    } else {
-      mainWindow.show();
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
     }
   });
 });
