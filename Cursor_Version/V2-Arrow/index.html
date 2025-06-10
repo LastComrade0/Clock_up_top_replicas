@@ -104,21 +104,15 @@
         }
 
         #content-area {
-            width: 480px;
-            height: 150px;
-            background: rgba(33, 33, 33, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            width: auto;
+            height: auto;
+            background: none;
+            border: none;
+            border-radius: 0;
             display: none;
-            padding: 15px;
-            color: #e0e0e0;
-            font-family: 'Segoe UI', sans-serif;
-            font-size: 14px;
-            line-height: 1.6;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin: 0 10px;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
             box-sizing: border-box;
             position: relative;
         }
@@ -265,6 +259,72 @@
             color: #b0b0b0;
             margin-left: 8px;
         }
+        #world-clock-section {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            background: rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 12px 8px 12px 16px;
+            margin-bottom: 18px;
+            gap: 0;
+            overflow-x: auto;
+            min-width: 0;
+        }
+        .world-clock-card {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            min-width: 90px;
+            padding: 0 18px 0 0;
+            margin-right: 0;
+            border-right: 1px solid rgba(255,255,255,0.25);
+        }
+        .world-clock-card:last-child {
+            border-right: none;
+        }
+        .world-clock-city {
+            font-size: 20px;
+            font-weight: 400;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+        .world-clock-time {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+        .world-clock-ampm {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            margin-left: 2px;
+        }
+        .world-clock-meta {
+            font-size: 12px;
+            color: #d0d0d0;
+            margin-bottom: 0;
+        }
+        .world-clock-add {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            font-size: 28px;
+            color: #fff;
+            background: rgba(255,255,255,0.18);
+            border-radius: 0 12px 12px 0;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            margin-left: 8px;
+            transition: background 0.15s;
+        }
+        .world-clock-add:hover {
+            background: rgba(255,255,255,0.28);
+        }
     </style>
 </head>
 <body>
@@ -277,6 +337,29 @@
     </div>
 
     <div id="content-area">
+        <div id="world-clock-section">
+            <div class="world-clock-card">
+                <div class="world-clock-city">NYC</div>
+                <div><span class="world-clock-time" id="nyc-time">--:--</span> <span class="world-clock-ampm" id="nyc-ampm">AM</span></div>
+                <div class="world-clock-meta" id="nyc-meta">Today, +3HRS</div>
+            </div>
+            <div class="world-clock-card">
+                <div class="world-clock-city">Dubai</div>
+                <div><span class="world-clock-time" id="dubai-time">--:--</span> <span class="world-clock-ampm" id="dubai-ampm">AM</span></div>
+                <div class="world-clock-meta" id="dubai-meta">Today, +11HRS</div>
+            </div>
+            <div class="world-clock-card">
+                <div class="world-clock-city">Tokyo</div>
+                <div><span class="world-clock-time" id="tokyo-time">--:--</span> <span class="world-clock-ampm" id="tokyo-ampm">AM</span></div>
+                <div class="world-clock-meta" id="tokyo-meta">Tomorrow, +16HRS</div>
+            </div>
+            <div class="world-clock-card">
+                <div class="world-clock-city">Paris</div>
+                <div><span class="world-clock-time" id="paris-time">--:--</span> <span class="world-clock-ampm" id="paris-ampm">AM</span></div>
+                <div class="world-clock-meta" id="paris-meta">Today, +9HRS</div>
+            </div>
+            <button class="world-clock-add">+</button>
+        </div>
         <!-- Content will be added here -->
     </div>
     <div id="more-options-menu">
@@ -357,6 +440,29 @@
                 }
             });
         });
+
+        // World Clock update logic
+        function updateWorldClocks() {
+            const now = new Date();
+            // NYC (UTC-4)
+            const nyc = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            document.getElementById('nyc-time').textContent = nyc.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('nyc-ampm').textContent = nyc.getHours() >= 12 ? 'PM' : 'AM';
+            // Dubai (UTC+4)
+            const dubai = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dubai' }));
+            document.getElementById('dubai-time').textContent = dubai.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('dubai-ampm').textContent = dubai.getHours() >= 12 ? 'PM' : 'AM';
+            // Tokyo (UTC+9)
+            const tokyo = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+            document.getElementById('tokyo-time').textContent = tokyo.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('tokyo-ampm').textContent = tokyo.getHours() >= 12 ? 'PM' : 'AM';
+            // Paris (UTC+2)
+            const paris = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+            document.getElementById('paris-time').textContent = paris.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('paris-ampm').textContent = paris.getHours() >= 12 ? 'PM' : 'AM';
+        }
+        updateWorldClocks();
+        setInterval(updateWorldClocks, 1000);
     </script>
 </body>
 </html>
