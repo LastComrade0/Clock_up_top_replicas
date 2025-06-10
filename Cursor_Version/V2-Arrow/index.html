@@ -105,7 +105,7 @@
 
         #content-area {
             width: 480px;
-            height: 100px;
+            height: 150px;
             background: rgba(33, 33, 33, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -120,6 +120,7 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             margin: 0 10px;
             box-sizing: border-box;
+            position: relative;
         }
 
         #content-area.show {
@@ -149,6 +150,120 @@
             color: #b0b0b0;
             margin-bottom: 8px;
         }
+
+        /* Three-dot menu button */
+        #more-options {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            -webkit-app-region: no-drag;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.7);
+            transition: color 0.2s ease;
+            z-index: 1001;
+        }
+
+        #more-options:hover {
+            color: rgba(255, 255, 255, 1);
+        }
+
+        #more-options::before {
+            content: '\22EF'; /* horizontal three-dot (meatball) */
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        /* More options menu */
+        #more-options-menu {
+            position: absolute;
+            top: 55px;
+            right: 26px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #222;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.08);
+            min-width: 220px;
+            padding: 6px 0;
+            display: none;
+            z-index: 2000;
+            max-height: 120px;
+            overflow-y: auto;
+            font-family: 'Segoe UI', 'San Francisco', Arial, sans-serif;
+            -webkit-app-region: no-drag;
+        }
+        /* Custom scrollbar styling */
+        #more-options-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+        #more-options-menu::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        #more-options-menu::-webkit-scrollbar-thumb {
+            background: rgba(33, 33, 33, 0.15);
+            border-radius: 3px;
+        }
+        #more-options-menu::-webkit-scrollbar-thumb:hover {
+            background: rgba(33, 33, 33, 0.25);
+        }
+        #more-options-menu.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+        .menu-section {
+            padding: 0;
+        }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px 0 32px;
+            height: 32px;
+            font-size: 15px;
+            color: #222;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+            border-radius: 6px;
+            -webkit-app-region: no-drag;
+        }
+        .menu-item:hover:not(.disabled) {
+            background: rgba(33, 33, 33, 0.08);
+        }
+        .menu-item.disabled {
+            color: #b0b0b0;
+            cursor: default;
+        }
+        .menu-separator {
+            height: 1px;
+            background: rgba(33,33,33,0.08);
+            margin: 4px 0;
+        }
+        .menu-check {
+            position: absolute;
+            left: 10px;
+            font-size: 15px;
+            color: #2196f3;
+            width: 16px;
+            text-align: center;
+        }
+        .menu-arrow {
+            font-size: 15px;
+            color: #b0b0b0;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -162,7 +277,15 @@
     </div>
 
     <div id="content-area">
+        <div id="more-options"></div>
         <!-- Content will be added here -->
+    </div>
+    <div id="more-options-menu">
+        <div class="menu-section">
+            <div class="menu-item" id="world-clock"><span class="menu-check"></span>World Clock</div>
+            <div class="menu-item" id="photos"><span class="menu-check"></span>Photos</div>
+            <div class="menu-item" id="streaming"><span class="menu-check"></span>Streaming</div>
+        </div>
     </div>
 
     <script>
@@ -201,6 +324,39 @@
             if (window.electron?.ipcRenderer) {
                 window.electron.ipcRenderer.send('minimize-app');
             }
+        });
+
+        // More options menu handler
+        const moreOptions = document.getElementById('more-options');
+        const moreOptionsMenu = document.getElementById('more-options-menu');
+
+        moreOptions.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moreOptionsMenu.classList.toggle('show');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!moreOptionsMenu.contains(e.target) && e.target !== moreOptions) {
+                moreOptionsMenu.classList.remove('show');
+            }
+        });
+
+        // Prevent menu from closing when scrolling
+        moreOptionsMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Menu item logic: toggle checkmark on click
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const check = item.querySelector('.menu-check');
+                if (check.textContent === '✓') {
+                    check.textContent = '';
+                } else {
+                    check.textContent = '✓';
+                }
+            });
         });
     </script>
 </body>
