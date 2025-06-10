@@ -14,7 +14,7 @@
             width: 100%;
             height: 100%;
             background: transparent;
-            overflow: hidden;
+            overflow: visible;
         }
 
         body {
@@ -154,8 +154,8 @@
         /* Three-dot menu button */
         #more-options {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 6px;
+            left: 6px;
             width: 24px;
             height: 24px;
             cursor: pointer;
@@ -163,13 +163,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(0, 0, 0, 0.6);
             transition: color 0.2s ease;
             z-index: 1001;
         }
 
         #more-options:hover {
-            color: rgba(255, 255, 255, 1);
+            color: rgba(0, 0, 0, 0.8);
         }
 
         #more-options::before {
@@ -181,21 +181,22 @@
         /* More options menu */
         #more-options-menu {
             position: absolute;
-            top: 55px;
-            right: 26px;
+            top: 0;
+            left: -10px;
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             color: #222;
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.3);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.08);
-            min-width: 220px;
-            padding: 6px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.08);
+            min-width: 0;
+            width: 180px;
+            padding: 4px 0;
             display: none;
             z-index: 2000;
-            max-height: 120px;
-            overflow-y: auto;
+            max-height: none;
+            overflow-y: visible;
             font-family: 'Segoe UI', 'San Francisco', Arial, sans-serif;
             -webkit-app-region: no-drag;
         }
@@ -222,12 +223,12 @@
             padding: 0;
         }
         .menu-item {
+            font-size: 14px;
+            padding: 0 6px 0 24px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 18px 0 32px;
-            height: 32px;
-            font-size: 15px;
             color: #222;
             background: none;
             border: none;
@@ -269,15 +270,13 @@
 <body>
     <div id="clock">
         <span id="time">--:--</span>
-
+        <div id="more-options"></div>
         <div id="close-button" class="window-button">×</div>
         <div id="minimize-button" class="window-button">−</div>
-
         <div id="menu-arrow"></div>
     </div>
 
     <div id="content-area">
-        <div id="more-options"></div>
         <!-- Content will be added here -->
     </div>
     <div id="more-options-menu">
@@ -361,4 +360,3 @@
     </script>
 </body>
 </html>
-

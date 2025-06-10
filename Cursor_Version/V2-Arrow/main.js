@@ -7,8 +7,8 @@ let isExpanded = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 300,
-    height: 100,
+    width: 600,
+    height: 600,
     transparent: true,
     frame: false,
     backgroundColor: '#00000000',
