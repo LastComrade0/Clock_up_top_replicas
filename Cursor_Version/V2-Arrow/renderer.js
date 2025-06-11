@@ -4,7 +4,7 @@ function updateClock() {
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const seconds = now.getSeconds().toString().padStart(2, '0');
-    document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+    document.getElementById('time').textContent = `${hours}:${minutes}:${seconds}`;
 }
 
 // Update clock every second
@@ -21,23 +21,60 @@ document.getElementById('minimize-button').addEventListener('click', () => {
     window.electron.ipcRenderer.send('minimize-app');
 });
 
-// Handle menu arrow
-const menuArrow = document.getElementById('menu-arrow');
-const menu = document.getElementById('menu');
+// More options menu handler
+const moreOptions = document.getElementById('more-options');
+const moreOptionsMenu = document.getElementById('more-options-menu');
 
-menuArrow.addEventListener('click', (e) => {
+function adjustWindowHeight() {
+    if (window.electron && window.electron.ipcRenderer) {
+        const menuHeight = moreOptionsMenu.offsetHeight;
+        const baseHeight = 100; // Base height for clock
+        const padding = 20; // Extra padding
+        const newHeight = baseHeight + menuHeight + padding;
+        window.electron.ipcRenderer.send('adjust-window-height', newHeight);
+    }
+}
+
+moreOptions.addEventListener('click', (e) => {
     e.stopPropagation();
-    menu.classList.toggle('show');
+    const rect = moreOptions.getBoundingClientRect();
+    moreOptionsMenu.style.top = rect.top + 'px';
+    moreOptionsMenu.classList.toggle('show');
+    
+    if (moreOptionsMenu.classList.contains('show')) {
+        adjustWindowHeight();
+    } else {
+        // Reset to base height when menu is closed
+        if (window.electron && window.electron.ipcRenderer) {
+            window.electron.ipcRenderer.send('adjust-window-height', 100);
+        }
+    }
 });
 
 // Close menu when clicking outside
 document.addEventListener('click', (e) => {
-    if (!menu.contains(e.target) && e.target !== menuArrow) {
-        menu.classList.remove('show');
+    if (!moreOptionsMenu.contains(e.target) && e.target !== moreOptions) {
+        moreOptionsMenu.classList.remove('show');
+        // Reset to base height when menu is closed
+        if (window.electron && window.electron.ipcRenderer) {
+            window.electron.ipcRenderer.send('adjust-window-height', 100);
+        }
     }
 });
 
-// Handle exit option
-document.getElementById('exit-option').addEventListener('click', () => {
-    window.electron.ipcRenderer.send('close-app');
+// Prevent menu from closing when clicking inside
+moreOptionsMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+});
+
+// Menu item logic: toggle checkmark on click
+document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        const check = item.querySelector('.menu-check');
+        if (check.textContent === '✓') {
+            check.textContent = '';
+        } else {
+            check.textContent = '✓';
+        }
+    });
 }); 

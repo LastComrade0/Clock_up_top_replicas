@@ -47,6 +47,77 @@
             margin-bottom: 10px;
         }
 
+        #more-options {
+            position: absolute;
+            left: 6px;
+            top: 6px;
+            width: 20px;
+            height: 20px;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-app-region: no-drag;
+            cursor: pointer;
+            opacity: 0.9;
+            line-height: 1;
+            pointer-events: auto;
+            z-index: 10;
+            letter-spacing: 2px;
+        }
+
+        #more-options:hover {
+            opacity: 1;
+            color: rgba(0, 0, 0, 0.8);
+        }
+
+        #more-options-menu {
+            display: none;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 150px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1000;
+            margin-left: 10px;
+        }
+
+        #more-options-menu.show {
+            display: block;
+        }
+
+        .menu-section {
+            padding: 4px 0;
+        }
+
+        .menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            color: #333;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .menu-item:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .menu-check {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
+
         .window-button {
             position: absolute;
             top: 6px;
@@ -290,6 +361,7 @@
 </head>
 <body>
     <div id="clock">
+        <div id="more-options">⋯</div>
         <span id="time">--:--</span>
         <div id="close-button" class="window-button">×</div>
         <div id="minimize-button" class="window-button">−</div>
@@ -318,6 +390,14 @@
         <div id="timezone-error" style="display:none; color:#ff5555; text-align:center; margin-top:10px;"></div>
     </div>
 
+    <div id="more-options-menu">
+        <div class="menu-section">
+            <div class="menu-item" id="world-clock"><span class="menu-check"></span>World Clock</div>
+            <div class="menu-item" id="photos"><span class="menu-check"></span>Photos</div>
+            <div class="menu-item" id="streaming"><span class="menu-check"></span>Streaming</div>
+        </div>
+    </div>
+
     <script>
         dayjs.extend(dayjs_plugin_utc);
         dayjs.extend(dayjs_plugin_timezone);
@@ -335,6 +415,8 @@
         const timezoneLoading = document.getElementById('timezone-loading');
         const timezoneNoResults = document.getElementById('timezone-no-results');
         const timezoneError = document.getElementById('timezone-error');
+        const moreOptions = document.getElementById('more-options');
+        const moreOptionsMenu = document.getElementById('more-options-menu');
 
         let allTimezones = [];
         let filteredTimezones = [];
@@ -464,6 +546,38 @@
             if (window.electron && window.electron.ipcRenderer) {
                 window.electron.ipcRenderer.send('minimize-app');
             }
+        });
+
+        // More options menu handler
+        moreOptions.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = moreOptions.getBoundingClientRect();
+            moreOptionsMenu.style.top = rect.top + 'px';
+            moreOptionsMenu.classList.toggle('show');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!moreOptionsMenu.contains(e.target) && e.target !== moreOptions) {
+                moreOptionsMenu.classList.remove('show');
+            }
+        });
+
+        // Prevent menu from closing when clicking inside
+        moreOptionsMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Menu item logic: toggle checkmark on click
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const check = item.querySelector('.menu-check');
+                if (check.textContent === '✓') {
+                    check.textContent = '';
+                } else {
+                    check.textContent = '✓';
+                }
+            });
         });
 
         setInterval(updateTime, 1000);

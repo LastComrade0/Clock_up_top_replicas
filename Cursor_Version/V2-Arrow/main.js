@@ -8,7 +8,7 @@ let isExpanded = false;
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 540,
-    height: 100,
+    height: 150,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -73,6 +73,20 @@ function createWindow() {
     isExpanded = !isExpanded;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setSize(540, isExpanded ? 280 : 100);
+    }
+  });
+
+  ipcMain.on('adjust-window-height', (event, height) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setSize(540, height);
+    }
+  });
+
+  // Handle meatball menu toggle
+  ipcMain.on('toggle-meatball-menu', (event, isShowing) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const [width] = mainWindow.getSize();
+      mainWindow.setSize(width, isShowing ? 280 : 100);
     }
   });
 
