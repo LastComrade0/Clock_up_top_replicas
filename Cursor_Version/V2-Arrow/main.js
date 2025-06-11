@@ -92,16 +92,6 @@ function createWindow() {
     mainWindow.hide();
   });
 
-  // Handle content toggle
-  ipcMain.on('toggle-content', () => {
-    isExpanded = !isExpanded;
-    if (isExpanded) {
-      mainWindow.setSize(480, 220);
-    } else {
-      mainWindow.setSize(300, 100);
-    }
-  });
-
   // Keep window on top
   mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   
