@@ -3,11 +3,12 @@ const path = require('path');
 
 let tray = null;
 let mainWindow = null;
+let isExpanded = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 600,
-    height: 400,
+    width: 540,
+    height: 100,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -28,8 +29,6 @@ function createWindow() {
   
   // Remove menu bar
   mainWindow.setMenuBarVisibility(false);
-  mainWindow.setSize(540, isExpanded ? 280 : 100);
-
 
   // Create tray icon
   tray = new Tray(path.join(__dirname, 'clock_icon.png'));
@@ -57,19 +56,26 @@ function createWindow() {
   // Handle close message from renderer
   ipcMain.on('close-app', () => {
     console.log('Close requested');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.destroy();
+    }
     app.quit();
   });
   
   ipcMain.on('minimize-app', () => {
     console.log('Minimize requested');
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) win.hide(); // Hide to tray
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.hide();
+    }
   });
   
   ipcMain.on('toggle-content', () => {
     isExpanded = !isExpanded;
-    mainWindow.setSize(540, isExpanded ? 280 : 100);
-});
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setSize(540, isExpanded ? 280 : 100);
+    }
+  });
+
   // Keep window on top
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   
@@ -85,8 +91,6 @@ function createWindow() {
     }
   });
 }
-
-
 
 app.whenReady().then(() => {
   createWindow();
