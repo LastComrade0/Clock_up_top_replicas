@@ -183,7 +183,7 @@
         #timezone-bar {
             display: none;
             align-items: center;
-            background: rgba(180, 180, 180, 0.25); /* soft, shady, transparent gray */
+            background: rgba(180, 180, 180, 0.25);
             border: 2px solid #b0b0b0;
             border-radius: 16px 16px 16px 16px;
             padding: 0;
@@ -192,9 +192,38 @@
             width: 520px;
             box-sizing: border-box;
         }
-        #timezone-bar.show {
-            display: flex;
+
+        .widget-container {
+            width: 520px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .widget-container.show {
+            display: block;
             animation: fadeIn 0.3s ease;
+        }
+
+        .widget {
+            background: rgba(180, 180, 180, 0.25);
+            border: 2px solid #b0b0b0;
+            border-radius: 16px;
+            padding: 20px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .widget-title {
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-align: center;
         }
 
         #timezone-list {
@@ -375,6 +404,20 @@
             </div>
             <div id="add-timezone-box" class="add-button">+</div>
         </div>
+
+        <div id="slideshow-widget" class="widget-container">
+            <div class="widget-title">Image Slideshow</div>
+            <div class="widget">
+                Slideshow widget coming soon...
+            </div>
+        </div>
+
+        <div id="stretching-widget" class="widget-container">
+            <div class="widget-title">Live Stretching</div>
+            <div class="widget">
+                Stretching exercises coming soon...
+            </div>
+        </div>
     </div>
 
     <!-- Timezone Selection Modal -->
@@ -506,6 +549,8 @@
         arrow.addEventListener('click', () => {
             arrow.classList.toggle('flipped');
             document.getElementById('timezone-bar').classList.toggle('show');
+            document.getElementById('slideshow-widget').classList.toggle('show');
+            document.getElementById('stretching-widget').classList.toggle('show');
             if (window.electron && window.electron.ipcRenderer) {
                 window.electron.ipcRenderer.send('toggle-content');
             }

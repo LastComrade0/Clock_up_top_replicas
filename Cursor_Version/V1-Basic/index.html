@@ -107,7 +107,77 @@
             transition: transform 0.3s ease;
         }
 
-     
+        #menu-dots {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            z-index: 20;
+            -webkit-app-region: no-drag;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        #menu-dots:hover {
+            opacity: 1;
+        }
+
+        #widgets-menu {
+            display: none;
+            position: absolute;
+            top: 44px;
+            left: 0;
+            background: #999;
+            color: #fff;
+            border-radius: 20px;
+            padding: 10px 16px 10px 16px;
+            z-index: 1001;
+            min-width: 140px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+            font-family: inherit;
+            font-size: 15px;
+        }
+        #widgets-menu.show {
+            display: block;
+            animation: fadeIn 0.2s;
+        }
+        .widgets-menu-title {
+            font-size: 12px;
+            color: #e0e0e0;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        .widgets-menu-item {
+            display: flex;
+            align-items: center;
+            font-size: 15px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            gap: 6px;
+            font-weight: 400;
+        }
+        .widgets-menu-item:last-child {
+            margin-bottom: 0;
+        }
+        .widgets-menu-item input[type="checkbox"] {
+            accent-color: #fff;
+            width: 16px;
+            height: 16px;
+            margin-right: 4px;
+        }
+        .widgets-menu-item .checkmark {
+            font-size: 14px;
+            color: #fff;
+            margin-right: 4px;
+            opacity: 0.8;
+        }
+        .widgets-menu-item input[type="checkbox"]:not(:checked) + .checkmark {
+            visibility: hidden;
+        }
 
         #timezone-bar {
             display: none;
@@ -125,6 +195,7 @@
             display: flex;
             animation: fadeIn 0.3s ease;
         }
+        #timezone-bar.hide { display: none !important; }
 
         #timezone-list {
             display: flex;
@@ -286,14 +357,51 @@
                 transform: translateY(0);
             }
         }
+
+        #widget-row {
+            display: flex;
+            flex-direction: row;
+            gap: 24px;
+            margin-top: 12px;
+            justify-content: center;
+        }
+        .widget-placeholder {
+            background: #999;
+            border-radius: 24px;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+        }
+        .widget-placeholder svg {
+            opacity: 0.8;
+        }
+        #widget-row.hide { display: none !important; }
+        #widget-row .widget-placeholder.hide { display: none !important; }
     </style>
 </head>
 <body>
     <div id="clock">
+        <div id="menu-dots" title="Widgets Menu">
+            <svg width="32" height="32" viewBox="0 0 32 32" style="display:block;margin:auto;">
+                <circle cx="8" cy="16" r="2.2" fill="#222"/>
+                <circle cx="16" cy="16" r="2.2" fill="#222"/>
+                <circle cx="24" cy="16" r="2.2" fill="#222"/>
+            </svg>
+        </div>
         <span id="time">--:--</span>
         <div id="close-button" class="window-button">×</div>
         <div id="minimize-button" class="window-button">−</div>
         <div id="menu-arrow"></div>
+    </div>
+
+    <div id="widgets-menu">
+        <div class="widgets-menu-title">WIDGETS</div>
+        <label class="widgets-menu-item"><input type="checkbox" id="widget-clock" checked> <span class="checkmark">✔</span> World Clock</label>
+        <label class="widgets-menu-item"><input type="checkbox" id="widget-images" checked> <span class="checkmark">✔</span> Images</label>
+        <label class="widgets-menu-item"><input type="checkbox" id="widget-stretching" checked> <span class="checkmark">✔</span> Live Stretching</label>
     </div>
 
     <div id="content-area">
@@ -302,6 +410,16 @@
                 <!-- Timezones dynamically injected here -->
             </div>
             <div id="add-timezone-box" class="add-button">+</div>
+        </div>
+        <div id="widget-row">
+            <div class="widget-placeholder">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style="display:block;margin:auto;">
+                    <rect x="8" y="16" width="48" height="32" rx="6" stroke="#222" stroke-width="3" fill="none"/>
+                    <circle cx="22" cy="28" r="5" stroke="#222" stroke-width="3" fill="none"/>
+                    <polyline points="16,44 32,32 48,44" stroke="#222" stroke-width="3" fill="none"/>
+                </svg>
+            </div>
+            <div class="widget-placeholder"></div>
         </div>
     </div>
 
@@ -465,6 +583,59 @@
                 window.electron.ipcRenderer.send('minimize-app');
             }
         });
+
+        // Widget menu logic
+        const menuDots = document.getElementById('menu-dots');
+        const widgetsMenu = document.getElementById('widgets-menu');
+        const widgetClock = document.getElementById('widget-clock');
+        const widgetImages = document.getElementById('widget-images');
+        const widgetStretching = document.getElementById('widget-stretching');
+        const timezoneBar = document.getElementById('timezone-bar');
+        const widgetRow = document.getElementById('widget-row');
+        const widgetPlaceholders = document.querySelectorAll('.widget-placeholder');
+
+        function updateWidgetVisibility() {
+            // World Clock
+            if (widgetClock.checked) {
+                timezoneBar.classList.remove('hide');
+            } else {
+                timezoneBar.classList.add('hide');
+            }
+            // Images (first widget)
+            if (widgetImages.checked) {
+                widgetPlaceholders[0].classList.remove('hide');
+            } else {
+                widgetPlaceholders[0].classList.add('hide');
+            }
+            // Live Stretching (second widget)
+            if (widgetStretching.checked) {
+                widgetPlaceholders[1].classList.remove('hide');
+            } else {
+                widgetPlaceholders[1].classList.add('hide');
+            }
+            // Hide widget row if both are hidden
+            if (!widgetImages.checked && !widgetStretching.checked) {
+                widgetRow.classList.add('hide');
+            } else {
+                widgetRow.classList.remove('hide');
+            }
+        }
+
+        menuDots.addEventListener('click', (e) => {
+            e.stopPropagation();
+            widgetsMenu.classList.toggle('show');
+        });
+        [widgetClock, widgetImages, widgetStretching].forEach(cb => {
+            cb.addEventListener('change', updateWidgetVisibility);
+        });
+        // Hide menu when clicking outside
+        document.addEventListener('mousedown', (e) => {
+            if (!widgetsMenu.contains(e.target) && !menuDots.contains(e.target)) {
+                widgetsMenu.classList.remove('show');
+            }
+        });
+        // Initial state
+        updateWidgetVisibility();
 
         setInterval(updateTime, 1000);
     </script>
