@@ -1,5 +1,3 @@
-
-
 // Update clock display
 function updateClock() {
     const now = new Date();
@@ -15,12 +13,12 @@ updateClock(); // Initial update
 
 // Handle close button
 document.getElementById('close-button').addEventListener('click', () => {
-    ipcRenderer.send('close-app');
+    window.electron.ipcRenderer.send('close-app');
 });
 
 // Handle minimize button
 document.getElementById('minimize-button').addEventListener('click', () => {
-    ipcRenderer.send('minimize-app');
+    window.electron.ipcRenderer.send('minimize-app');
 });
 
 // Handle menu arrow
@@ -41,5 +39,5 @@ document.addEventListener('click', (e) => {
 
 // Handle exit option
 document.getElementById('exit-option').addEventListener('click', () => {
-    ipcRenderer.send('close-app');
+    window.electron.ipcRenderer.send('close-app');
 }); 
