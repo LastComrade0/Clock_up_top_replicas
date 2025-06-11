@@ -19,7 +19,10 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     },
     alwaysOnTop: true,
-    skipTaskbar: true
+    skipTaskbar: true,
+    focusable: false,
+    fullscreenable: false,
+    type: 'panel'
   });
 
   mainWindow.loadFile('index.html');
@@ -100,11 +103,11 @@ function createWindow() {
   });
 
   // Keep window on top
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   
   // Handle window focus
   mainWindow.on('blur', () => {
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   });
 }
 
