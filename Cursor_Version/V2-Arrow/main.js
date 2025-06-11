@@ -7,8 +7,8 @@ let isExpanded = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 300,
-    height: 100,
+    width: 600,
+    height: 600,
     transparent: true,
     frame: false,
     backgroundColor: '#00000000',
@@ -19,7 +19,10 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     },
     alwaysOnTop: true,
-    skipTaskbar: true
+    skipTaskbar: true,
+    focusable: false,
+    fullscreenable: false,
+    type: 'panel'
   });
 
   mainWindow.loadFile('index.html');
@@ -89,22 +92,12 @@ function createWindow() {
     mainWindow.hide();
   });
 
-  // Handle content toggle
-  ipcMain.on('toggle-content', () => {
-    isExpanded = !isExpanded;
-    if (isExpanded) {
-      mainWindow.setSize(480, 220);
-    } else {
-      mainWindow.setSize(300, 100);
-    }
-  });
-
   // Keep window on top
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   
   // Handle window focus
   mainWindow.on('blur', () => {
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   });
 }
 

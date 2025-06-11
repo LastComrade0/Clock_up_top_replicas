@@ -6,8 +6,8 @@ let mainWindow = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 280,
-    height: 90,
+    width: 600,
+    height: 400,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -15,8 +15,9 @@ function createWindow() {
     useContentSize: true,
     skipTaskbar: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
@@ -27,6 +28,8 @@ function createWindow() {
   
   // Remove menu bar
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.setSize(540, isExpanded ? 280 : 100);
+
 
   // Create tray icon
   tray = new Tray(path.join(__dirname, 'clock_icon.png'));
@@ -53,14 +56,20 @@ function createWindow() {
 
   // Handle close message from renderer
   ipcMain.on('close-app', () => {
+    console.log('Close requested');
     app.quit();
   });
-
-  // Handle minimize message from renderer
+  
   ipcMain.on('minimize-app', () => {
-    mainWindow.hide();
+    console.log('Minimize requested');
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) win.hide(); // Hide to tray
   });
-
+  
+  ipcMain.on('toggle-content', () => {
+    isExpanded = !isExpanded;
+    mainWindow.setSize(540, isExpanded ? 280 : 100);
+});
   // Keep window on top
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   
@@ -68,7 +77,16 @@ function createWindow() {
   mainWindow.on('blur', () => {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
   });
+
+  tray.on('click', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isVisible()) mainWindow.hide();
+      else mainWindow.show();
+    }
+  });
 }
+
+
 
 app.whenReady().then(() => {
   createWindow();
