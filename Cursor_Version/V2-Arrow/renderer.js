@@ -1,12 +1,10 @@
-const { ipcRenderer } = require('electron');
-
 // Update clock display
 function updateClock() {
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const seconds = now.getSeconds().toString().padStart(2, '0');
-    document.getElementById('time').textContent = `${hours}:${minutes}:${seconds}`;
+    document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
 }
 
 // Update clock every second
@@ -15,12 +13,12 @@ updateClock(); // Initial update
 
 // Handle close button
 document.getElementById('close-button').addEventListener('click', () => {
-    ipcRenderer.send('close-app');
+    window.electron.ipcRenderer.send('close-app');
 });
 
 // Handle minimize button
 document.getElementById('minimize-button').addEventListener('click', () => {
-    ipcRenderer.send('minimize-app');
+    window.electron.ipcRenderer.send('minimize-app');
 });
 
 // Handle menu arrow
@@ -41,5 +39,5 @@ document.addEventListener('click', (e) => {
 
 // Handle exit option
 document.getElementById('exit-option').addEventListener('click', () => {
-    ipcRenderer.send('close-app');
+    window.electron.ipcRenderer.send('close-app');
 }); 

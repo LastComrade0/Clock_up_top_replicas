@@ -83,13 +83,6 @@ function createWindow() {
   mainWindow.on('blur', () => {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
   });
-
-  tray.on('click', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      if (mainWindow.isVisible()) mainWindow.hide();
-      else mainWindow.show();
-    }
-  });
 }
 
 app.whenReady().then(() => {

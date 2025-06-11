@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Clock up Top</title>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,22 +18,22 @@
             width: 100%;
             height: 100%;
             background: transparent;
-            overflow: visible;
+            overflow: hidden;
         }
 
         body {
             font-family: 'Segoe UI', sans-serif;
-            -webkit-app-region: drag;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
         #clock {
+            -webkit-app-region: drag;
             font-size: 40px;
             font-weight: 300;
             color: #000;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.85);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 12px;
             padding: 20px 40px;
@@ -43,7 +47,6 @@
             margin-bottom: 10px;
         }
 
-        /* Top-right buttons */
         .window-button {
             position: absolute;
             top: 6px;
@@ -59,6 +62,8 @@
             cursor: pointer;
             opacity: 0.9;
             line-height: 1;
+            pointer-events: auto;
+            z-index: 10;
         }
 
         #close-button {
@@ -74,7 +79,6 @@
             color: rgba(0, 0, 0, 0.8);
         }
 
-        /* Arrow Button */
         #menu-arrow {
             position: absolute;
             bottom: 6px;
@@ -103,23 +107,173 @@
             transition: transform 0.3s ease;
         }
 
-        #content-area {
-            width: auto;
-            height: auto;
-            background: none;
-            border: none;
-            border-radius: 0;
+     
+
+        #timezone-bar {
             display: none;
+            align-items: center;
+            background: rgba(180, 180, 180, 0.25); /* soft, shady, transparent gray */
+            border: 2px solid #b0b0b0;
+            border-radius: 16px 16px 16px 16px;
             padding: 0;
-            margin: 0;
-            box-shadow: none;
+            min-height: 60px;
+            margin-bottom: 16px;
+            width: 520px;
             box-sizing: border-box;
-            position: relative;
+        }
+        #timezone-bar.show {
+            display: flex;
+            animation: fadeIn 0.3s ease;
         }
 
-        #content-area.show {
+        #timezone-list {
+            display: flex;
+            gap: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            max-height: none;
+            flex: 1 1 91%;
+            background: none;
+            border-radius: 16px 0 0 16px;
+            min-width: 0;
+            width: calc(100% - 72px); /* 4 cities * 112px each, + button 72px */
+        }
+
+        .timezone-card {
+            flex: 0 0 auto;
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-width: 112px;
+            max-width: 112px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 500;
+            border-bottom: none;
+            background: none;
+            border-radius: 0;
+        }
+        .timezone-card:not(:last-child) {
+            border-right: 2px solid #b0b0b0;
+        }
+        .timezone-card:first-child {
+            /* flush with left border */
+        }
+
+        .add-button {
+            flex: 0 0 9%;
+            width: 9%;
+            min-width: 56px;
+            max-width: 72px;
+            height: auto;
+            align-self: stretch;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            background: #d3d3d3;
+            color: #222;
+            border-radius: 0 16px 16px 0;
+            margin: 0;
+            cursor: pointer;
+            -webkit-app-region: no-drag;
+            box-shadow: none;
+            border: none;
+            transition: background 0.2s;
+        }
+        .add-button:hover {
+            background: #cccccc;
+        }
+
+        /* Timezone Modal Styles */
+        #timezone-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(33, 33, 33, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            width: 400px;
+            max-height: 80vh;
+            z-index: 1000;
+            -webkit-app-region: no-drag;
+        }
+
+        #timezone-modal.show {
             display: block;
-            animation: fadeIn 0.3s ease;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        #timezone-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #timezone-modal-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        #timezone-modal-close {
+            color: #b0b0b0;
+            font-size: 20px;
+            cursor: pointer;
+            -webkit-app-region: no-drag;
+        }
+
+        #timezone-search {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        #timezone-search::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        #timezone-list-modal {
+            max-height: calc(80vh - 120px);
+            overflow-y: auto;
+        }
+
+        .timezone-option {
+            padding: 10px;
+            color: white;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+
+        .timezone-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
         }
 
         @keyframes fadeIn {
@@ -132,337 +286,187 @@
                 transform: translateY(0);
             }
         }
-
-        #content-area h2 {
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: 500;
-            margin-bottom: 10px;
-        }
-
-        #content-area p {
-            color: #b0b0b0;
-            margin-bottom: 8px;
-        }
-
-        /* Three-dot menu button */
-        #more-options {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            -webkit-app-region: no-drag;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(0, 0, 0, 0.6);
-            transition: color 0.2s ease;
-            z-index: 1001;
-        }
-
-        #more-options:hover {
-            color: rgba(0, 0, 0, 0.8);
-        }
-
-        #more-options::before {
-            content: '\22EF'; /* horizontal three-dot (meatball) */
-            font-size: 24px;
-            line-height: 1;
-        }
-
-        /* More options menu */
-        #more-options-menu {
-            position: absolute;
-            top: 0;
-            left: -10px;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            color: #222;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.3);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.08);
-            min-width: 0;
-            width: 180px;
-            padding: 4px 0;
-            display: none;
-            z-index: 2000;
-            max-height: none;
-            overflow-y: visible;
-            font-family: 'Segoe UI', 'San Francisco', Arial, sans-serif;
-            -webkit-app-region: no-drag;
-        }
-        /* Custom scrollbar styling */
-        #more-options-menu::-webkit-scrollbar {
-            width: 6px;
-        }
-        #more-options-menu::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-        #more-options-menu::-webkit-scrollbar-thumb {
-            background: rgba(33, 33, 33, 0.15);
-            border-radius: 3px;
-        }
-        #more-options-menu::-webkit-scrollbar-thumb:hover {
-            background: rgba(33, 33, 33, 0.25);
-        }
-        #more-options-menu.show {
-            display: block;
-            animation: fadeIn 0.2s ease;
-        }
-        .menu-section {
-            padding: 0;
-        }
-        .menu-item {
-            font-size: 14px;
-            padding: 0 6px 0 24px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            color: #222;
-            background: none;
-            border: none;
-            width: 100%;
-            text-align: left;
-            cursor: pointer;
-            transition: background 0.15s;
-            position: relative;
-            border-radius: 6px;
-            -webkit-app-region: no-drag;
-        }
-        .menu-item:hover:not(.disabled) {
-            background: rgba(33, 33, 33, 0.08);
-        }
-        .menu-item.disabled {
-            color: #b0b0b0;
-            cursor: default;
-        }
-        .menu-separator {
-            height: 1px;
-            background: rgba(33,33,33,0.08);
-            margin: 4px 0;
-        }
-        .menu-check {
-            position: absolute;
-            left: 10px;
-            font-size: 15px;
-            color: #2196f3;
-            width: 16px;
-            text-align: center;
-        }
-        .menu-arrow {
-            font-size: 15px;
-            color: #b0b0b0;
-            margin-left: 8px;
-        }
-        #world-clock-section {
-            display: flex;
-            flex-direction: row;
-            align-items: stretch;
-            background: rgba(255,255,255,0.15);
-            border-radius: 16px;
-            padding: 12px 8px 12px 16px;
-            margin-bottom: 18px;
-            gap: 0;
-            overflow-x: auto;
-            min-width: 0;
-        }
-        .world-clock-card {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: center;
-            min-width: 90px;
-            padding: 0 18px 0 0;
-            margin-right: 0;
-            border-right: 1px solid rgba(255,255,255,0.25);
-        }
-        .world-clock-card:last-child {
-            border-right: none;
-        }
-        .world-clock-city {
-            font-size: 20px;
-            font-weight: 400;
-            color: #fff;
-            margin-bottom: 2px;
-        }
-        .world-clock-time {
-            font-size: 20px;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 2px;
-        }
-        .world-clock-ampm {
-            font-size: 12px;
-            font-weight: 700;
-            color: #fff;
-            margin-left: 2px;
-        }
-        .world-clock-meta {
-            font-size: 12px;
-            color: #d0d0d0;
-            margin-bottom: 0;
-        }
-        .world-clock-add {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 40px;
-            font-size: 28px;
-            color: #fff;
-            background: rgba(255,255,255,0.18);
-            border-radius: 0 12px 12px 0;
-            cursor: pointer;
-            border: none;
-            outline: none;
-            margin-left: 8px;
-            transition: background 0.15s;
-        }
-        .world-clock-add:hover {
-            background: rgba(255,255,255,0.28);
-        }
     </style>
 </head>
 <body>
     <div id="clock">
         <span id="time">--:--</span>
-        <div id="more-options"></div>
         <div id="close-button" class="window-button">×</div>
         <div id="minimize-button" class="window-button">−</div>
         <div id="menu-arrow"></div>
     </div>
 
     <div id="content-area">
-        <div id="world-clock-section">
-            <div class="world-clock-card">
-                <div class="world-clock-city">NYC</div>
-                <div><span class="world-clock-time" id="nyc-time">--:--</span> <span class="world-clock-ampm" id="nyc-ampm">AM</span></div>
-                <div class="world-clock-meta" id="nyc-meta">Today, +3HRS</div>
+        <div id="timezone-bar">
+            <div id="timezone-list">
+                <!-- Timezones dynamically injected here -->
             </div>
-            <div class="world-clock-card">
-                <div class="world-clock-city">Dubai</div>
-                <div><span class="world-clock-time" id="dubai-time">--:--</span> <span class="world-clock-ampm" id="dubai-ampm">AM</span></div>
-                <div class="world-clock-meta" id="dubai-meta">Today, +11HRS</div>
-            </div>
-            <div class="world-clock-card">
-                <div class="world-clock-city">Tokyo</div>
-                <div><span class="world-clock-time" id="tokyo-time">--:--</span> <span class="world-clock-ampm" id="tokyo-ampm">AM</span></div>
-                <div class="world-clock-meta" id="tokyo-meta">Tomorrow, +16HRS</div>
-            </div>
-            <div class="world-clock-card">
-                <div class="world-clock-city">Paris</div>
-                <div><span class="world-clock-time" id="paris-time">--:--</span> <span class="world-clock-ampm" id="paris-ampm">AM</span></div>
-                <div class="world-clock-meta" id="paris-meta">Today, +9HRS</div>
-            </div>
-            <button class="world-clock-add">+</button>
-        </div>
-        <!-- Content will be added here -->
-    </div>
-    <div id="more-options-menu">
-        <div class="menu-section">
-            <div class="menu-item" id="world-clock"><span class="menu-check"></span>World Clock</div>
-            <div class="menu-item" id="photos"><span class="menu-check"></span>Photos</div>
-            <div class="menu-item" id="streaming"><span class="menu-check"></span>Streaming</div>
+            <div id="add-timezone-box" class="add-button">+</div>
         </div>
     </div>
 
+    <!-- Timezone Selection Modal -->
+    <div id="timezone-modal">
+        <div id="timezone-modal-header">
+            <div id="timezone-modal-title">Select Timezone</div>
+            <div id="timezone-modal-close">×</div>
+        </div>
+        <input type="text" id="timezone-search" placeholder="Search timezones...">
+        <div id="timezone-list-modal"></div>
+        <div id="timezone-loading" style="display:none; color:#aaa; text-align:center; margin-top:10px;">Loading...</div>
+        <div id="timezone-no-results" style="display:none; color:#aaa; text-align:center; margin-top:10px;">No results found.</div>
+        <div id="timezone-error" style="display:none; color:#ff5555; text-align:center; margin-top:10px;"></div>
+    </div>
+
     <script>
+        dayjs.extend(dayjs_plugin_utc);
+        dayjs.extend(dayjs_plugin_timezone);
         const timeEl = document.getElementById('time');
         const arrow = document.getElementById('menu-arrow');
         const contentArea = document.getElementById('content-area');
         const closeButton = document.getElementById('close-button');
         const minimizeButton = document.getElementById('minimize-button');
+        const timezoneList = document.getElementById('timezone-list');
+        const addBox = document.getElementById('add-timezone-box');
+        const timezoneModal = document.getElementById('timezone-modal');
+        const timezoneModalClose = document.getElementById('timezone-modal-close');
+        const timezoneSearch = document.getElementById('timezone-search');
+        const timezoneListModal = document.getElementById('timezone-list-modal');
+        const timezoneLoading = document.getElementById('timezone-loading');
+        const timezoneNoResults = document.getElementById('timezone-no-results');
+        const timezoneError = document.getElementById('timezone-error');
+
+        let allTimezones = [];
+        let filteredTimezones = [];
+        let selectedTimezones = new Set();
+        let cityTimeData = [];
 
         function updateTime() {
             const now = new Date();
             timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            updateCityTimes();
         }
 
-        updateTime();
-        setInterval(updateTime, 1000);
+        function updateCityTimes() {
+            if (!selectedTimezones.size) return;
+            timezoneList.innerHTML = '';
+            Array.from(selectedTimezones).forEach(tz => {
+                const city = tz.split('/').pop().replace(/_/g, ' ');
+                const cityTime = dayjs().tz(tz);
+                const ampm = cityTime.format('A');
+                const hourMin = cityTime.format('h:mm');
+                const dayLabel = cityTime.format('dddd') === dayjs().format('dddd') ? 'Today' : 'Tomorrow';
+                // Calculate offset from local time
+                const offsetHrs = cityTime.utcOffset()/60 - dayjs().utcOffset()/60;
+                const offsetStr = offsetHrs === 0 ? '' : (offsetHrs > 0 ? `+${offsetHrs}` : `${offsetHrs}`);
+                const offsetLabel = offsetStr ? `, ${offsetStr}HRS` : '';
+                const div = document.createElement('div');
+                div.className = 'timezone-card';
+                div.innerHTML = `
+                    <div style="font-size: 20px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; letter-spacing: 0.5px;">${city}</div>
+                    <div style="font-size: 18px; font-weight: bold;">${hourMin} <span style='font-size:12px;font-weight:600;'>${ampm}</span></div>
+                    <div style="font-size: 11px; color: #666; margin-top: 2px;">${dayLabel}${offsetLabel}</div>
+                `;
+                timezoneList.appendChild(div);
+            });
+        }
 
-        // Arrow click handler
+        async function loadAllTimezones() {
+            timezoneLoading.style.display = 'block';
+            timezoneNoResults.style.display = 'none';
+            timezoneError.style.display = 'none';
+            timezoneListModal.innerHTML = '';
+            try {
+                const response = await fetch('https://worldtimeapi.org/api/timezone', { method: 'GET', headers: { 'Accept': 'application/json' } });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                allTimezones = await response.json();
+                filteredTimezones = allTimezones;
+                displayTimezones(filteredTimezones);
+                timezoneLoading.style.display = 'none';
+            } catch (error) {
+                console.error('Error loading timezones:', error);
+                timezoneLoading.style.display = 'none';
+                timezoneError.style.display = 'block';
+                timezoneError.textContent = 'Failed to load timezones: ' + error.message;
+            }
+        }
+
+        function displayTimezones(timezones) {
+            timezoneListModal.innerHTML = '';
+            timezoneNoResults.style.display = (timezones.length === 0) ? 'block' : 'none';
+            timezoneLoading.style.display = 'none';
+            if (timezones.length > 0) {
+                timezones.forEach(tz => {
+                    const div = document.createElement('div');
+                    div.className = 'timezone-option';
+                    div.textContent = tz.replace(/_/g, ' ');
+                    div.onclick = () => selectTimezone(tz);
+                    timezoneListModal.appendChild(div);
+                });
+            }
+        }
+
+        function selectTimezone(timezone) {
+            if (!selectedTimezones.has(timezone)) {
+                if (selectedTimezones.size >= 4) {
+                    // Remove the first city (oldest)
+                    const first = selectedTimezones.values().next().value;
+                    selectedTimezones.delete(first);
+                }
+                selectedTimezones.add(timezone);
+                updateCityTimes();
+                timezoneModal.classList.remove('show');
+            }
+        }
+
         arrow.addEventListener('click', () => {
             arrow.classList.toggle('flipped');
-            contentArea.classList.toggle('show');
-            if (window.electron?.ipcRenderer) {
+            document.getElementById('timezone-bar').classList.toggle('show');
+            if (window.electron && window.electron.ipcRenderer) {
                 window.electron.ipcRenderer.send('toggle-content');
             }
         });
 
-        // Close button click handler
+        addBox.addEventListener('click', () => {
+            timezoneModal.classList.add('show');
+            timezoneSearch.value = '';
+            if (allTimezones.length === 0) {
+                loadAllTimezones();
+            } else {
+                filteredTimezones = allTimezones;
+                displayTimezones(filteredTimezones);
+            }
+        });
+
+        timezoneModalClose.addEventListener('click', () => {
+            timezoneModal.classList.remove('show');
+        });
+
+        timezoneSearch.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            filteredTimezones = allTimezones.filter(tz => 
+                tz.toLowerCase().includes(searchTerm)
+            );
+            displayTimezones(filteredTimezones);
+        });
+
         closeButton.addEventListener('click', () => {
-            if (window.electron?.ipcRenderer) {
+            console.log('Close button clicked');
+            if (window.electron && window.electron.ipcRenderer) {
                 window.electron.ipcRenderer.send('close-app');
             }
         });
 
-        // Minimize button click handler
         minimizeButton.addEventListener('click', () => {
-            if (window.electron?.ipcRenderer) {
+            console.log('Minimize button clicked');
+            if (window.electron && window.electron.ipcRenderer) {
                 window.electron.ipcRenderer.send('minimize-app');
             }
         });
 
-        // More options menu handler
-        const moreOptions = document.getElementById('more-options');
-        const moreOptionsMenu = document.getElementById('more-options-menu');
-
-        moreOptions.addEventListener('click', (e) => {
-            e.stopPropagation();
-            moreOptionsMenu.classList.toggle('show');
-        });
-
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!moreOptionsMenu.contains(e.target) && e.target !== moreOptions) {
-                moreOptionsMenu.classList.remove('show');
-            }
-        });
-
-        // Prevent menu from closing when scrolling
-        moreOptionsMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-
-        // Menu item logic: toggle checkmark on click
-        document.querySelectorAll('.menu-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const check = item.querySelector('.menu-check');
-                if (check.textContent === '✓') {
-                    check.textContent = '';
-                } else {
-                    check.textContent = '✓';
-                }
-            });
-        });
-
-        // World Clock update logic
-        function updateWorldClocks() {
-            const now = new Date();
-            // NYC (UTC-4)
-            const nyc = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            document.getElementById('nyc-time').textContent = nyc.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('nyc-ampm').textContent = nyc.getHours() >= 12 ? 'PM' : 'AM';
-            // Dubai (UTC+4)
-            const dubai = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dubai' }));
-            document.getElementById('dubai-time').textContent = dubai.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('dubai-ampm').textContent = dubai.getHours() >= 12 ? 'PM' : 'AM';
-            // Tokyo (UTC+9)
-            const tokyo = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-            document.getElementById('tokyo-time').textContent = tokyo.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('tokyo-ampm').textContent = tokyo.getHours() >= 12 ? 'PM' : 'AM';
-            // Paris (UTC+2)
-            const paris = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-            document.getElementById('paris-time').textContent = paris.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('paris-ampm').textContent = paris.getHours() >= 12 ? 'PM' : 'AM';
-        }
-        updateWorldClocks();
-        setInterval(updateWorldClocks, 1000);
+        setInterval(updateTime, 1000);
     </script>
 </body>
 </html>
