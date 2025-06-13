@@ -12,7 +12,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    resizable: false,
+    resizable: true,
     useContentSize: true,
     skipTaskbar: true,
     webPreferences: {
