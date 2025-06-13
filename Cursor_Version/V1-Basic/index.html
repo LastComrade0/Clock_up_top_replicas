@@ -1033,43 +1033,39 @@
         const widgetRow = document.getElementById('widget-row');
         const widgetPlaceholders = document.querySelectorAll('.widget-placeholder');
 
+        // Hide all widgets initially
+        widgetRow.classList.add('hide');
+        widgetRow.style.display = 'none';
+        timezoneBar.classList.add('hide');
+        timezoneBar.style.display = 'none';
+
+        // Update widget visibility function
         function updateWidgetVisibility() {
             try {
                 // World Clock
                 if (timezoneBar) {
-                    if (widgetClock?.checked) {
-                        timezoneBar.classList.remove('hide');
-                    } else {
-                        timezoneBar.classList.add('hide');
-                    }
+                    timezoneBar.classList.toggle('hide', !widgetClock.checked);
+                    timezoneBar.style.display = widgetClock.checked ? 'flex' : 'none';
                 }
 
-                // Images (first widget)
+                // Photo widget
                 if (widgetPlaceholders?.length > 0) {
-                    if (widgetImages?.checked) {
-                        widgetPlaceholders[0].classList.remove('hide');
-                    } else {
-                        widgetPlaceholders[0].classList.add('hide');
-                    }
+                    widgetPlaceholders[0].classList.toggle('hide', !widgetImages.checked);
+                    widgetPlaceholders[0].style.display = widgetImages.checked ? 'flex' : 'none';
                 }
 
-                // Live Stretching (second widget)
+                // Stretching widget
                 const stretchingWidget = document.getElementById('live-stretching-widget');
                 if (stretchingWidget) {
-                    if (widgetStretching?.checked) {
-                        stretchingWidget.classList.remove('hide');
-                    } else {
-                        stretchingWidget.classList.add('hide');
-                    }
+                    stretchingWidget.classList.toggle('hide', !widgetStretching.checked);
+                    stretchingWidget.style.display = widgetStretching.checked ? 'flex' : 'none';
                 }
 
-                // Hide widget row if both are hidden
+                // Show/hide widget row based on any widget being checked
+                const anyWidgetChecked = [widgetClock, widgetImages, widgetStretching].some(cb => cb.checked);
                 if (widgetRow) {
-                    if (!widgetImages?.checked && !widgetStretching?.checked) {
-                        widgetRow.classList.add('hide');
-                    } else {
-                        widgetRow.classList.remove('hide');
-                    }
+                    widgetRow.classList.toggle('hide', !anyWidgetChecked);
+                    widgetRow.style.display = anyWidgetChecked ? 'flex' : 'none';
                 }
             } catch (error) {
                 console.error('Error updating widget visibility:', error);
@@ -1080,17 +1076,17 @@
             e.stopPropagation();
             widgetsMenu.classList.toggle('show');
             if (widgetsMenu.classList.contains('show')) {
+                // Update widget visibility when menu is shown
+                updateWidgetVisibility();
                 setTimeout(resizeForVisibleWidgets, 10); // Give DOM a moment to update
             }
         });
 
         // Helper: Resize window for visible widgets
         function resizeForVisibleWidgets() {
-            // Dynamically measure the height of the main content area
             const contentArea = document.getElementById('content-area');
             let measuredHeight = 0;
             if (contentArea) {
-                // Add some padding for the clock/menu above
                 measuredHeight = contentArea.getBoundingClientRect().height + 110;
             } else {
                 measuredHeight = 300; // fallback
@@ -1101,15 +1097,19 @@
                 window.resizeWindow(Math.round(measuredHeight));
             }
         }
+
+        // Add change event listeners
         [widgetClock, widgetImages, widgetStretching].forEach(cb => {
             cb.addEventListener('change', updateWidgetVisibility);
         });
+
         // Hide menu when clicking outside
         document.addEventListener('mousedown', (e) => {
             if (!widgetsMenu.contains(e.target) && !menuDots.contains(e.target)) {
                 widgetsMenu.classList.remove('show');
             }
         });
+
         // Initial state
         updateWidgetVisibility();
 
