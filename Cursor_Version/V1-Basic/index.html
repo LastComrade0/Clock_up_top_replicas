@@ -446,6 +446,17 @@
             </div>
         </div>
         <!-- End widget row -->
+
+        <!-- Stretch Session Modal -->
+        <div id="stretch-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.18); z-index: 2000; align-items: center; justify-content: center;">
+          <div style="background: #f5f5f5; border-radius: 24px; padding: 28px 30px 20px 30px; box-shadow: 0 2px 16px rgba(0,0,0,0.13); text-align: center; min-width: 240px; max-width: 330px; margin: auto;">
+            <div style="font-size: 1.18rem; color: #222; font-weight: 500; margin-bottom: 18px;">Do you want to join<br>this stretch session?</div>
+            <div style="display: flex; justify-content: center; gap: 18px;">
+              <button id="stretch-yes" style="background: #7CFFB2; color: #222; font-size: 1.07rem; font-weight: 500; border: none; border-radius: 16px; padding: 10px 26px; cursor: pointer; margin-right: 2px;">Yes</button>
+              <button id="stretch-no" style="background: #FF7C7C; color: #222; font-size: 1.07rem; font-weight: 500; border: none; border-radius: 16px; padding: 10px 26px; cursor: pointer;">No</button>
+            </div>
+          </div>
+        </div>
     </div>
 
     <!-- Timezone Selection Modal -->
@@ -686,21 +697,58 @@
         setInterval(updateTime, 1000);
     </script>
 <script>
-// Basic 30:00 countdown for Live Stretching widget
+// Basic 30:00 countdown for Live Stretching widget with join modal
 (function() {
-  let timer = 30 * 60; // 30 minutes in seconds
+  let timer = 3 * 60; // 3 minutes in seconds
   const display = document.getElementById('stretch-timer');
+  const modal = document.getElementById('stretch-modal');
+  const yesBtn = document.getElementById('stretch-yes');
+  const noBtn = document.getElementById('stretch-no');
+  let modalShown = false;
+  let intervalId;
+
+  function resetTimer() {
+    timer = 5 * 60;
+    modalShown = false;
+    if (modal) modal.style.display = 'none';
+  }
+
   function updateTimer() {
     if (!display) return;
     const mins = Math.floor(timer / 60);
     const secs = timer % 60;
     display.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    if (timer > 0) timer--;
+
+    // Show modal at 1:00
+    if (timer === 60 && !modalShown) {
+      if (modal) modal.style.display = 'flex';
+      modalShown = true;
+    }
+    // If timer hits 0 and modal is still open, reset timer and hide modal
+    if (timer === 0) {
+      if (modal && modal.style.display !== 'none') {
+        resetTimer();
+      } else {
+        timer = 3 * 60;
+        modalShown = false;
+      }
+    } else {
+      timer--;
+    }
   }
+
   if (display) {
     updateTimer();
-    setInterval(updateTimer, 1000);
+    intervalId = setInterval(updateTimer, 1000);
   }
+  if (yesBtn) yesBtn.onclick = function() {
+    if (modal) modal.style.display = 'none';
+    // Optionally: handle "joining" logic here
+  };
+  if (noBtn) noBtn.onclick = function() {
+    if (modal) modal.style.display = 'none';
+    // Optionally: handle "not joining" logic here
+  };
 })();
 // Widget toggling logic
 (function() {
