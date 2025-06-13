@@ -1055,10 +1055,10 @@
                 }
 
                 // Stretching widget
-                const stretchingWidget = document.getElementById('live-stretching-widget');
-                if (stretchingWidget) {
-                    stretchingWidget.classList.toggle('hide', !widgetStretching.checked);
-                    stretchingWidget.style.display = widgetStretching.checked ? 'flex' : 'none';
+                const stretchWidget = document.querySelector('.stretch-widget');
+                if (stretchWidget) {
+                    stretchWidget.closest('.widget-placeholder').classList.toggle('hide', !widgetStretching.checked);
+                    stretchWidget.closest('.widget-placeholder').style.display = widgetStretching.checked ? 'flex' : 'none';
                 }
 
                 // Show/hide widget row based on any widget being checked
