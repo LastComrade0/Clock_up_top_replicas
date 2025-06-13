@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -418,16 +418,34 @@
             </div>
             <div id="add-timezone-box" class="add-button">+</div>
         </div>
-        <div id="widget-row">
-            <div class="widget-placeholder">
+
+        <!-- Live Stretching and Images Row -->
+        <div id="widget-row" style="display: flex; flex-direction: row; justify-content: center; align-items: flex-start; gap: 16px; margin-top: 18px;">
+            <div id="images-placeholder" class="widget-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #bbb; border-radius: 18px; padding: 18px 24px; min-width: 120px; min-height: 120px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
                 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style="display:block;margin:auto;">
                     <rect x="8" y="16" width="48" height="32" rx="6" stroke="#222" stroke-width="3" fill="none"/>
                     <circle cx="22" cy="28" r="5" stroke="#222" stroke-width="3" fill="none"/>
                     <polyline points="16,44 32,32 48,44" stroke="#222" stroke-width="3" fill="none"/>
                 </svg>
             </div>
-            <div class="widget-placeholder"></div>
+            <div id="live-stretching-widget" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #888; border-radius: 18px; padding: 14px 16px; width: 200px; min-width: 160px; max-width: 220px; min-height: 110px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+                <div id="stretch-timer" style="font-size: 1.6rem; font-weight: bold; color: #fff;">30:00</div>
+                <div style="font-size: 0.98rem; color: #eee; margin-top: 2px; margin-bottom: 6px;">Next Stretch Break</div>
+              </div>
+              <div style="width: 100%; height: 1px; background: #bbb; margin: 4px 0 6px 0;"></div>
+              <div style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;">
+                <div style="font-size: 1.01rem; color: #fff; font-weight: 500; margin-bottom: 3px;">Online:</div>
+                <ul id="stretch-online-users" style="list-style: none; padding: 0; margin: 0;">
+                  <li style="color: #7CFFB2; font-size: 0.97rem; margin-bottom: 2px;">• Ayman</li>
+                  <li style="color: #7CFFB2; font-size: 0.97rem; margin-bottom: 2px;">• Ishie</li>
+                  <li style="color: #7CFFB2; font-size: 0.97rem; margin-bottom: 2px;">• Jerry</li>
+                  <li style="color: #7CFFB2; font-size: 0.97rem;">• Rob</li>
+                </ul>
+              </div>
+            </div>
         </div>
+        <!-- End widget row -->
     </div>
 
     <!-- Timezone Selection Modal -->
@@ -616,9 +634,9 @@
             }
             // Live Stretching (second widget)
             if (widgetStretching.checked) {
-                widgetPlaceholders[1].classList.remove('hide');
+                document.getElementById('live-stretching-widget').classList.remove('hide');
             } else {
-                widgetPlaceholders[1].classList.add('hide');
+                document.getElementById('live-stretching-widget').classList.add('hide');
             }
             // Hide widget row if both are hidden
             if (!widgetImages.checked && !widgetStretching.checked) {
@@ -631,7 +649,28 @@
         menuDots.addEventListener('click', (e) => {
             e.stopPropagation();
             widgetsMenu.classList.toggle('show');
+            if (widgetsMenu.classList.contains('show')) {
+                setTimeout(resizeForVisibleWidgets, 10); // Give DOM a moment to update
+            }
         });
+
+        // Helper: Resize window for visible widgets
+        function resizeForVisibleWidgets() {
+            // Dynamically measure the height of the main content area
+            const contentArea = document.getElementById('content-area');
+            let measuredHeight = 0;
+            if (contentArea) {
+                // Add some padding for the clock/menu above
+                measuredHeight = contentArea.getBoundingClientRect().height + 110;
+            } else {
+                measuredHeight = 300; // fallback
+            }
+            if (window.electron && window.electron.ipcRenderer) {
+                window.electron.ipcRenderer.send('resize-window', { height: Math.round(measuredHeight) });
+            } else if (window.resizeWindow) {
+                window.resizeWindow(Math.round(measuredHeight));
+            }
+        }
         [widgetClock, widgetImages, widgetStretching].forEach(cb => {
             cb.addEventListener('change', updateWidgetVisibility);
         });
@@ -646,5 +685,35 @@
 
         setInterval(updateTime, 1000);
     </script>
+<script>
+// Basic 30:00 countdown for Live Stretching widget
+(function() {
+  let timer = 30 * 60; // 30 minutes in seconds
+  const display = document.getElementById('stretch-timer');
+  function updateTimer() {
+    if (!display) return;
+    const mins = Math.floor(timer / 60);
+    const secs = timer % 60;
+    display.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    if (timer > 0) timer--;
+  }
+  if (display) {
+    updateTimer();
+    setInterval(updateTimer, 1000);
+  }
+})();
+// Widget toggling logic
+(function() {
+  const stretchingWidget = document.getElementById('live-stretching-widget');
+  const stretchingCheckbox = document.getElementById('widget-stretching');
+  if (stretchingWidget && stretchingCheckbox) {
+    function toggleStretchingWidget() {
+      stretchingWidget.style.display = stretchingCheckbox.checked ? 'flex' : 'none';
+    }
+    stretchingCheckbox.addEventListener('change', toggleStretchingWidget);
+    toggleStretchingWidget();
+  }
+})();
+</script>
 </body>
 </html>
