@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld(
         ipcRenderer: {
             send: (channel, data) => {
                 // whitelist channels
-                let validChannels = ['close-app', 'minimize-app', 'toggle-content', 'resize-window'];
+                let validChannels = ['close-app', 'minimize-app', 'toggle-content'];
                 if (validChannels.includes(channel)) {
                     ipcRenderer.send(channel, data);
                 }
