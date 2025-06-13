@@ -12,7 +12,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    resizable: false,
+    resizable: true,
     useContentSize: true,
     skipTaskbar: true,
     webPreferences: {
@@ -73,6 +73,15 @@ function createWindow() {
     isExpanded = !isExpanded;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setSize(540, isExpanded ? 280 : 100);
+    }
+  });
+
+  // Handle resize-window message from renderer
+  ipcMain.on('resize-window', (event, arg) => {
+    if (mainWindow && !mainWindow.isDestroyed() && arg && arg.height) {
+      // Use current width, only change height
+      const [currentWidth] = mainWindow.getSize();
+      mainWindow.setSize(currentWidth, Math.max(100, arg.height));
     }
   });
 
