@@ -11,9 +11,9 @@ function initializeClock() {
         const hours = now.getHours().toString().padStart(2, '0');
         const minutes = now.getMinutes().toString().padStart(2, '0');
         const seconds = now.getSeconds().toString().padStart(2, '0');
-        const clockElement = document.getElementById('clock');
-        if (clockElement) {
-            clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+        const timeElement = document.getElementById('time');
+        if (timeElement) {
+            timeElement.textContent = `${hours}:${minutes}:${seconds}`;
         }
     }
 
@@ -39,6 +39,75 @@ function setupSignInButtons() {
             e.preventDefault();
             e.stopPropagation();
             
+    const menuButton = document.getElementById('menu-dots');
+    const widgetsMenu = document.getElementById('widgets-menu');
+
+    if (menuButton && widgetsMenu) {
+        menuButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            widgetsMenu.classList.toggle('show');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!widgetsMenu.contains(e.target) && e.target !== menuButton) {
+                widgetsMenu.classList.remove('show');
+            }
+        });
+    }
+
+    // Timezone bar toggle
+    const menuArrow = document.getElementById('menu-arrow');
+    const timezoneBar = document.getElementById('timezone-bar');
+
+    if (menuArrow && timezoneBar) {
+        menuArrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menuArrow.classList.toggle('flipped');
+            timezoneBar.classList.toggle('show');
+            
+            // Only try to send IPC message if Electron is available
+            if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.send('toggle-content');
+            }
+        });
+    }
+
+    // Window controls
+    const closeButton = document.getElementById('close-button');
+    const minimizeButton = document.getElementById('minimize-button');
+
+    if (closeButton) {
+        closeButton.addEventListener('click', () => {
+            if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.send('close-app');
+            } else {
+                console.warn('Close button clicked but Electron IPC is not available');
+            }
+        });
+    }
+
+    if (minimizeButton) {
+        minimizeButton.addEventListener('click', () => {
+            if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.send('minimize-app');
+            } else {
+                console.warn('Minimize button clicked but Electron IPC is not available');
+            }
+        });
+    }
+
+    // Handle sign in button clicks
+    const signInButtons = [
+        document.getElementById('sign-in-button'),
+        document.querySelector('.widget-placeholder:last-child .sign-in-button')
+    ].filter(Boolean);
+
+    signInButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             try {
                 const user = await signInWithGoogle();
                 console.log('User signed in:', user.displayName);
@@ -54,54 +123,62 @@ function setupSignInButtons() {
             }
         });
     });
-}
-
-// Set up UI event listeners
-function setupUIListeners() {
-    // Handle close button
-    const closeButton = document.getElementById('close-button');
-    if (closeButton) {
-        closeButton.addEventListener('click', () => {
-            window.electron?.ipcRenderer?.send('close-app');
-        });
-    }
-
-    // Handle minimize button
-    const minimizeButton = document.getElementById('minimize-button');
-    if (minimizeButton) {
-        minimizeButton.addEventListener('click', () => {
-            window.electron?.ipcRenderer?.send('minimize-app');
-        });
-    }
-
-    // Handle menu toggle
-    const menuArrow = document.getElementById('menu-arrow');
-    const menu = document.getElementById('menu');
-    if (menuArrow && menu) {
-        menuArrow.addEventListener('click', (e) => {
-            e.stopPropagation();
-            menu.classList.toggle('show');
-        });
-
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!menu.contains(e.target) && e.target !== menuArrow) {
-                menu.classList.remove('show');
-            }
-        });
-    }
 
     // Handle exit option
     const exitOption = document.getElementById('exit-option');
     if (exitOption) {
         exitOption.addEventListener('click', () => {
-            window.electron?.ipcRenderer?.send('close-app');
+            if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.send('close-app');
+            } else {
+                console.warn('Exit option clicked but Electron IPC is not available');
+            }
         });
     }
 }
 
-// Check for redirect result when the app loads
-async function checkRedirectResult() {
+// Wait for Firebase to be fully initialized
+function waitForFirebase() {
+    return new Promise((resolve) => {
+        const checkFirebase = () => {
+            if (window.firebase && window.firebaseAuth) {
+                console.log('Firebase is ready');
+                resolve();
+            } else {
+                console.log('Waiting for Firebase to initialize...');
+                setTimeout(checkFirebase, 100);
+            }
+        };
+        checkFirebase();
+    });
+}
+
+// Initialize the application
+async function initializeApp() {
+    console.log('Initializing application...');
+    
+    // Wait for Firebase to be ready
+    await waitForFirebase();
+    
+    // Initialize auth
+    initializeAuth();
+    
+    // Set up auth state change listener
+    onAuthStateChanged((user) => {
+        console.log('Auth state changed:', user ? `User signed in: ${user.email}` : 'User signed out');
+        
+        if (user) {
+            // Hide all lock overlays when signed in
+            document.querySelectorAll('.lock-overlay').forEach(overlay => {
+                overlay.style.display = 'none';
+            });
+        }
+    });
+    
+    // Set up UI event listeners
+    setupUIListeners();
+    
+    // Check for redirect result
     try {
         // Listen for OAuth response from main process (Electron)
         if (window.electron) {

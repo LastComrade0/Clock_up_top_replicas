@@ -1,227 +1,219 @@
-console.log('Auth.js loaded');
-
-let auth, db, googleProvider;
-
-// Function to initialize Firebase services
-function initializeFirebase() {
-    if (!window.firebase || !window.firebase.auth) {
-        console.error('Firebase not initialized yet');
-        return false;
+// Auth state observer
+firebase.auth.onAuthStateChanged((user) => {
+    if (user) {
+        // User is signed in
+        updateUIForAuthenticatedUser(user);
+    } else {
+        // User is signed out
+        updateUIForSignedOutUser();
     }
+});
 
-    try {
-        // Get Firebase auth and firestore instances
-        const { 
-            GoogleAuthProvider,
-            signInWithRedirect,
-            getRedirectResult,
-            signInWithPopup
-        } = window.firebase.auth;
-
-        // Initialize services
-        auth = window.firebaseAuth;
-        db = window.firebaseDb;
-        googleProvider = new GoogleAuthProvider();
-
-        // Configure Google provider
-        googleProvider.setCustomParameters({
-            prompt: 'select_account'
-        });
-
-        // Make methods available
-        window.firebase.auth = {
-            ...window.firebase.auth,
-            signInWithRedirect: (...args) => signInWithRedirect(auth, ...args),
-            getRedirectResult: () => getRedirectResult(auth),
-            signInWithPopup: (...args) => signInWithPopup(auth, ...args)
-        };
-
-        console.log('Firebase services initialized in auth.js');
-        return true;
-    } catch (error) {
-        console.error('Error initializing Firebase services:', error);
-        return false;
-    }
-}
-
-// Initialize Firebase services
-const isFirebaseInitialized = initializeFirebase();
-if (!isFirebaseInitialized) {
-    console.warn('Firebase services not initialized yet, will retry when needed');
-}
-
-// Import Firestore functions
-const { 
-    doc, 
-    setDoc, 
-    updateDoc, 
-    serverTimestamp 
-} = window.firebase.firestore;
-
-// Track auth state
-let currentUser = null;
-let authStateListeners = [];
-
-// Helper function to notify all auth state listeners
-function notifyAuthStateListeners(user) {
-    currentUser = user;
-    authStateListeners.forEach(listener => listener(user));
-}
-
-// Initialize auth state tracking
-export function initializeAuth() {
-    console.log('Initializing auth state tracking');
+// Show the appropriate auth form
+function showAuthForm(widget, formType) {
+    // Hide all auth buttons and forms
+    widget.querySelector('.auth-buttons').style.display = 'none';
+    widget.querySelectorAll('.auth-form').forEach(form => form.style.display = 'none');
     
-    // Set up auth state change listener
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-        try {
-            if (user) {
-                console.log('Auth state changed - user signed in:', user.uid);
-                
-                // Save user data to Firestore
-                const userRef = doc(db, 'users', user.uid);
-                await setDoc(userRef, {
-                    uid: user.uid,
-                    name: user.displayName,
-                    email: user.email,
-                    photoURL: user.photoURL,
-                    lastLogin: serverTimestamp(),
-                    online: true
-                }, { merge: true });
+    // Show the requested form
+    const form = widget.querySelector(`#${formType}-form`);
+    if (form) {
+        form.style.display = 'block';
+        form.querySelector('input')?.focus();
+    }
+}
 
-                // Send Google token to renderer if available
-                const token = await user.getIdToken();
-                if (token && window.electron?.ipcRenderer) {
-                    console.log('Sending token to renderer');
-                    window.electron.ipcRenderer.send('google-token', token);
-                }
-                
-                // Set up cleanup when window is closed
-                window.addEventListener('beforeunload', async () => {
-                    try {
-                        await updateDoc(userRef, { online: false });
-                    } catch (error) {
-                        console.error('Error updating user status on unload:', error);
-                    }
-                });
-                
-                // Notify listeners
-                notifyAuthStateListeners(user);
-            } else {
-                console.log('Auth state changed - no user signed in');
-                notifyAuthStateListeners(null);
-            }
-        } catch (error) {
-            console.error('Error in auth state change:', error);
-        }
+// Hide auth form and show buttons
+function hideAuthForm(widget) {
+    widget.querySelector('.auth-buttons').style.display = 'flex';
+    widget.querySelectorAll('.auth-form').forEach(form => {
+        form.style.display = 'none';
+        // Clear form fields
+        form.querySelectorAll('input').forEach(input => input.value = '');
+        // Clear any error messages
+        const messageEl = form.querySelector('.auth-form-message');
+        if (messageEl) messageEl.textContent = '';
     });
-    
-    // Cleanup function
-    return () => {
-        if (unsubscribe) unsubscribe();
-    };
 }
 
-// Sign in function
-export async function signInWithGoogle() {
+// Handle authentication (sign in/sign up)
+async function handleAuth(widget, form, action) {
+    const email = form.querySelector('.auth-email').value.trim();
+    const password = form.querySelector('.auth-password').value;
+    const messageEl = form.querySelector('.auth-form-message');
+    
+    // Basic validation
+    if (!email || !password) {
+        showMessage(messageEl, 'Please fill in all fields', 'error');
+        return;
+    }
+    
+    if (action === 'signup') {
+        const confirmPassword = form.querySelector('.auth-confirm-password').value;
+        if (password !== confirmPassword) {
+            showMessage(messageEl, 'Passwords do not match', 'error');
+            return;
+        }
+        if (password.length < 6) {
+            showMessage(messageEl, 'Password must be at least 6 characters', 'error');
+            return;
+        }
+    }
+    
     try {
-        console.log('Starting Google sign in...');
+        showMessage(messageEl, action === 'signin' ? 'Signing in...' : 'Creating account...', 'info');
         
-        // For Electron, we need to use signInWithRedirect
-        if (window.electron) {
-            console.log('Running in Electron environment, using signInWithRedirect');
+        if (action === 'signin') {
+            // Sign in with email and password
+            await firebase.auth.signInWithEmailAndPassword(email, password);
+        } else {
+            // Create new user account
+            const userCredential = await firebase.auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
             
-            // Add custom parameters for better UX in Electron
-            googleProvider.setCustomParameters({
-                prompt: 'select_account',
-                hd: '*'  // Optional: restrict to specific domain
-            });
+            // Create user document in Firestore
+            await firebase.firestore.setDoc(
+                firebase.firestore.doc(firebase.firestore.db, 'users', user.uid),
+                {
+                    email: user.email,
+                    createdAt: firebase.firestore.serverTimestamp(),
+                    lastLogin: firebase.firestore.serverTimestamp()
+                }
+            );
             
-            // Store the current URL to redirect back after auth
-            const redirectUrl = window.location.href.split('#')[0];
-            sessionStorage.setItem('auth_redirect_url', redirectUrl);
-            
-            // Start the sign-in process
-            await signInWithRedirect(auth, googleProvider);
-            return null;
-        } 
-        // For web, we can use signInWithPopup
-        else {
-            console.log('Running in web environment, using signInWithPopup');
-            const result = await signInWithPopup(auth, googleProvider);
-            return result.user;
+            showMessage(messageEl, 'Account created successfully!', 'success');
         }
     } catch (error) {
-        console.error('Google sign in error:', error);
-        throw error;
-    }
-}
-
-// Check for redirect result
-export async function handleRedirectResult() {
-    try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-            const user = result.user;
-            console.log('User signed in (redirect):', user.displayName);
-            return user;
+        console.error('Auth error:', error);
+        let errorMessage = 'An error occurred. Please try again.';
+        
+        // Handle specific error cases
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            errorMessage = 'Invalid email or password';
+        } else if (error.code === 'auth/email-already-in-use') {
+            errorMessage = 'An account with this email already exists';
+        } else if (error.code === 'auth/weak-password') {
+            errorMessage = 'Password should be at least 6 characters';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = 'Invalid email address';
         }
-        return null;
-    } catch (error) {
-        console.error('Error handling redirect result:', error);
-        throw error;
+        
+        showMessage(messageEl, errorMessage, 'error');
     }
 }
 
-// Sign out function
-export async function signOut() {
-    try {
-        await auth.signOut();
-        notifyAuthStateListeners(null);
-    } catch (error) {
-        console.error('Error signing out:', error);
-        throw error;
-    }
-}
-
-// Get current user
-export function getCurrentUser() {
-    return currentUser;
-}
-
-// Subscribe to auth state changes
-export function onAuthStateChanged(callback) {
-    // Add the callback to our listeners
-    authStateListeners.push(callback);
-    
-    // Immediately invoke with current user if available
-    if (currentUser !== undefined) {
-        callback(currentUser);
-    }
-    
-    // Return unsubscribe function
-    return () => {
-        authStateListeners = authStateListeners.filter(listener => listener !== callback);
-    };
-}
-if (typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', () => {
-      const signInBtn = document.getElementById('sign-in-button');
-      if (signInBtn) {
-        console.log('Binding click listener to sign-in-button');
-        signInBtn.addEventListener('click', async () => {
-          try {
-            await signInWithGoogle();
-          } catch (err) {
-            console.error('Sign-in failed:', err);
-            alert('Sign-in failed. Check the console for details.');
-          }
+// Update UI for authenticated user
+function updateUIForAuthenticatedUser(user) {
+    document.querySelectorAll('.widget-placeholder').forEach(widget => {
+        const notSignedInEl = widget.querySelector('.not-signed-in');
+        const authButtons = widget.querySelector('.auth-buttons');
+        
+        if (notSignedInEl) {
+            notSignedInEl.textContent = user.email;
+            notSignedInEl.classList.add('signed-in');
+        }
+        
+        if (authButtons) {
+            authButtons.style.display = 'none';
+        }
+        
+        // Hide all auth forms
+        widget.querySelectorAll('.auth-form').forEach(form => {
+            form.style.display = 'none';
         });
-      } else {
-        console.warn('Sign-in button not found');
-      }
+        
+        // Add sign out button if it doesn't exist
+        if (!widget.querySelector('.sign-out-button')) {
+            const signOutBtn = document.createElement('button');
+            signOutBtn.className = 'auth-button sign-out-button';
+            signOutBtn.textContent = 'Sign Out';
+            signOutBtn.onclick = () => firebase.auth.signOut();
+            widget.querySelector('.lock-overlay').appendChild(signOutBtn);
+        }
     });
-  }
-  
-// Export the auth object for direct access if needed
-export { auth };
+}
+
+// Update UI for signed out user
+function updateUIForSignedOutUser() {
+    document.querySelectorAll('.widget-placeholder').forEach(widget => {
+        const notSignedInEl = widget.querySelector('.not-signed-in');
+        const authButtons = widget.querySelector('.auth-buttons');
+        
+        if (notSignedInEl) {
+            notSignedInEl.textContent = 'Not Signed In';
+            notSignedInEl.classList.remove('signed-in');
+        }
+        
+        if (authButtons) {
+            authButtons.style.display = 'flex';
+        }
+        
+        // Remove sign out button if it exists
+        const signOutBtn = widget.querySelector('.sign-out-button');
+        if (signOutBtn) {
+            signOutBtn.remove();
+        }
+    });
+}
+
+// Helper function to show messages
+function showMessage(element, message, type) {
+    if (!element) return;
+    element.textContent = message;
+    element.style.color = type === 'error' ? '#ff6b6b' : 
+                         type === 'success' ? '#7CFFB2' : '#4a90e2';
+}
+
+// Initialize event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Show sign-in form
+    document.querySelectorAll('.sign-in-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const widget = this.closest('.widget-placeholder');
+            showAuthForm(widget, 'signin');
+        });
+    });
+
+    // Show sign-up form
+    document.querySelectorAll('.sign-up-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const widget = this.closest('.widget-placeholder');
+            showAuthForm(widget, 'signup');
+        });
+    });
+
+    // Handle form submissions
+    document.querySelectorAll('.auth-form-submit').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const form = this.closest('.auth-form');
+            const widget = form.closest('.widget-placeholder');
+            const isSignIn = form.id === 'signin-form';
+            
+            handleAuth(widget, form, isSignIn ? 'signin' : 'signup');
+        });
+    });
+
+    // Handle cancel buttons
+    document.querySelectorAll('.auth-form-cancel').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const form = this.closest('.auth-form');
+            const widget = form.closest('.widget-placeholder');
+            hideAuthForm(widget);
+        });
+    });
+
+    // Handle switch between sign-in and sign-up
+    document.querySelectorAll('.auth-form-switch').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const currentForm = this.closest('.auth-form');
+            const widget = currentForm.closest('.widget-placeholder');
+            const targetForm = this.textContent.toLowerCase().includes('sign up') ? 'signup' : 'signin';
+            
+            hideAuthForm(widget);
+            showAuthForm(widget, targetForm);
+        });
+    });
+});

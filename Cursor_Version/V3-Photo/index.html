@@ -11,15 +11,23 @@
             getAuth, 
             GoogleAuthProvider, 
             signInWithPopup, 
-            signInWithRedirect, 
-            getRedirectResult 
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged
         } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
         import { 
             getFirestore, 
             doc, 
             setDoc, 
-            serverTimestamp, 
-            updateDoc 
+            getDoc,
+            updateDoc,
+            serverTimestamp,
+            collection,
+            addDoc,
+            query,
+            where,
+            getDocs
         } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
         
         // Your web app's Firebase configuration
@@ -32,55 +40,46 @@
             appId: "1:165135532100:web:6801b1fdd924d0314e7c11"
         };
         
-        // Set up redirect URL for OAuth
-        const redirectUrl = window.location.href.split('?')[0];
-        window.redirectUrl = redirectUrl;
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
         
-        // For Electron apps, we need to set a custom domain verifier
-        const electron = window.electron || {};
-        if (electron.process && electron.process.type === 'renderer') {
-            // This is running in the renderer process
-            window.__electronFirebaseOptions = { isElectron: true };
-        }
-
-        try {
-            // Initialize Firebase
-            const firebaseApp = initializeApp(firebaseConfig);
-            const firebaseAuth = getAuth(firebaseApp);
-            const firebaseDb = getFirestore(firebaseApp);
-            
-            // Make Firebase instances globally available
-            window.firebaseApp = firebaseApp;
-            window.firebaseAuth = firebaseAuth;
-            window.firebaseDb = firebaseDb;
-            
-            // For backward compatibility
-            window.firebase = {
-                auth: {
-                    GoogleAuthProvider,
-                    signInWithPopup,
-                    signInWithRedirect,
-                    getRedirectResult,
-                    getAuth: () => firebaseAuth
-                },
-                firestore: {
-                    doc,
-                    setDoc,
-                    updateDoc,
-                    serverTimestamp,
-                    getFirestore: () => firebaseDb
-                }
-            };
-            
-            console.log('Firebase initialized successfully');
-        } catch (error) {
-            console.error('Firebase initialization error:', error);
-        }
+        // Make auth and db available globally
+        window.auth = auth;
+        window.db = db;
+        
+        // Firebase services
+        window.firebase = {
+            auth: {
+                signInWithEmailAndPassword: (email, password) => 
+                    signInWithEmailAndPassword(auth, email, password),
+                createUserWithEmailAndPassword: (email, password) => 
+                    createUserWithEmailAndPassword(auth, email, password),
+                signOut: () => signOut(auth),
+                onAuthStateChanged: (callback) => onAuthStateChanged(auth, callback)
+            },
+            firestore: {
+                collection: (path) => collection(db, path),
+                doc: (path) => doc(db, path),
+                setDoc: (docRef, data) => setDoc(docRef, data, { merge: true }),
+                getDoc: (docRef) => getDoc(docRef),
+                updateDoc: (docRef, data) => updateDoc(docRef, data),
+                addDoc: (collectionRef, data) => addDoc(collectionRef, data),
+                query: (collectionRef, ...queryConstraints) => 
+                    query(collectionRef, ...queryConstraints),
+                where: (fieldPath, opStr, value) => where(fieldPath, opStr, value),
+                getDocs: (query) => getDocs(query),
+                serverTimestamp: () => serverTimestamp()
+            }
+        };
+        
         console.log('Firebase initialized');
     </script>
     
-    <!-- Day.js -->
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <!-- App Scripts -->
+    <script src="app.js"></script>
+    <script src="auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
     <style>
@@ -319,9 +318,6 @@
         .timezone-card:not(:last-child) {
             border-right: 2px solid #b0b0b0;
         }
-        .timezone-card:first-child {
-            /* flush with left border */
-        }
 
         .add-button {
             flex: 0 0 9%;
@@ -472,6 +468,7 @@
                 inset 0 0 16px rgba(0, 0, 0, 0.3),
                 inset 0 0 24px rgba(0, 0, 0, 0.2),
                 inset 0 0 32px rgba(0, 0, 0, 0.1);
+            min-height: 200px; /* Ensure minimum height */
         }
         .photo-slideshow {
             position: relative;
@@ -696,48 +693,168 @@
         .widget-placeholder svg {
             opacity: 0.8;
         }
-        .widget-placeholder .lock-icon {
+        .widget-placeholder .lock-overlay {
             position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 30px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .widget-placeholder .lock-icon {
+            width: 24px;
+            height: 24px;
             fill: #fff;
             opacity: 0.8;
+            margin-bottom: 8px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
         .widget-placeholder .not-signed-in {
-            position: absolute;
-            top: 35%;
-            left: 50%;
-            transform: translateX(-50%);
             color: #fff;
             font-family: 'Segoe UI', sans-serif;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 300;
             opacity: 0.8;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
+            margin-bottom: 10px;
+            display: block;
         }
-        .widget-placeholder .sign-in-button {
+        .widget-placeholder .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .widget-placeholder .auth-button {
             background: rgba(255, 255, 255, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: #fff;
-            padding: 4px 10px;
-            border-radius: 8px;
+            padding: 3px 8px;
+            border-radius: 4px;
             cursor: pointer;
             font-family: 'Segoe UI', sans-serif;
             font-size: 10px;
             font-weight: 500;
             transition: all 0.2s ease;
             letter-spacing: 0.5px;
+            width: 70px;
         }
-        .widget-placeholder .sign-in-button:hover {
+        .widget-placeholder .auth-button:hover {
             background: rgba(255, 255, 255, 0.25);
-            border-color: rgba(255, 255, 255, 0.4);
             transform: translateY(-1px);
         }
         #widget-row.hide { display: none !important; }
         #widget-row .widget-placeholder.hide { display: none !important; }
+
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        /* Auth Forms */
+        .auth-form {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            max-width: 220px;
+            margin-top: 10px;
+        }
+        
+        .auth-form.active {
+            display: flex;
+        }
+        
+        .auth-form input {
+            width: 100%;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 12px;
+        }
+        
+        .auth-form input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+        }
+        
+        .auth-form-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .auth-form-button {
+            flex: 1;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .auth-form-submit {
+            background: #4a90e2;
+            color: white;
+        }
+        
+        .auth-form-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .auth-form-button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .auth-form-message {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #ff6b6b;
+            min-height: 14px;
+        }
+        
+        .auth-form-switch {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #aaa;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .auth-form-switch:hover {
+            color: #4a90e2;
+        }
+
+        .not-signed-in {
+            color: #fff;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .sign-up-button {
+            background-color: #2ecc71;
+        }
+        
+        .sign-out-button {
+            background-color: #e74c3c;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -779,11 +896,35 @@
                     <img src="./resources/photo3.jpg" alt="Photo 3" class="widget-photo">
                 </div>
                 <div class="lock-overlay">
-                    <svg class="lock-icon" viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: #fff;">
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                    <svg width="30" height="30" viewBox="0 0 24 24" class="lock-icon">
+                        <path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                     </svg>
                     <div class="not-signed-in">Not Signed In</div>
-                    <button id="sign-in-button" class="sign-in-button">Sign In</button>
+                    <div class="auth-buttons">
+                        <button class="auth-button sign-in-button">Sign In</button>
+                        <button class="auth-button sign-up-button">Sign Up</button>
+                    </div>
+                    <div id="signin-form" class="auth-form">
+                        <input type="email" class="auth-email" placeholder="Email">
+                        <input type="password" class="auth-password" placeholder="Password">
+                        <div class="auth-form-buttons">
+                            <button class="auth-form-button auth-form-cancel">Cancel</button>
+                            <button class="auth-form-button auth-form-submit">Sign In</button>
+                        </div>
+                        <div class="auth-form-message"></div>
+                        <div class="auth-form-switch" onclick="switchAuth('signup')">Don't have an account? Sign up</div>
+                    </div>
+                    <div id="signup-form" class="auth-form">
+                        <input type="email" class="auth-email" placeholder="Email">
+                        <input type="password" class="auth-password" placeholder="Password">
+                        <input type="password" class="auth-confirm-password" placeholder="Confirm Password">
+                        <div class="auth-form-buttons">
+                            <button class="auth-form-button auth-form-cancel">Cancel</button>
+                            <button class="auth-form-button auth-form-submit">Sign Up</button>
+                        </div>
+                        <div class="auth-form-message"></div>
+                        <div class="auth-form-switch" onclick="switchAuth('signin')">Already have an account? Sign in</div>
+                    </div>
                 </div>
             </div>
             <div class="widget-placeholder">
@@ -807,7 +948,31 @@
                         <path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                     </svg>
                     <div class="not-signed-in">Not Signed In</div>
-                    <button class="sign-in-button">Sign In</button>
+                    <div class="auth-buttons">
+                        <button class="auth-button sign-in-button">Sign In</button>
+                        <button class="auth-button sign-up-button">Sign Up</button>
+                    </div>
+                    <div id="signin-form" class="auth-form">
+                        <input type="email" class="auth-email" placeholder="Email">
+                        <input type="password" class="auth-password" placeholder="Password">
+                        <div class="auth-form-buttons">
+                            <button class="auth-form-button auth-form-cancel">Cancel</button>
+                            <button class="auth-form-button auth-form-submit">Sign In</button>
+                        </div>
+                        <div class="auth-form-message"></div>
+                        <div class="auth-form-switch" onclick="switchAuth('signup')">Don't have an account? Sign up</div>
+                    </div>
+                    <div id="signup-form" class="auth-form">
+                        <input type="email" class="auth-email" placeholder="Email">
+                        <input type="password" class="auth-password" placeholder="Password">
+                        <input type="password" class="auth-confirm-password" placeholder="Confirm Password">
+                        <div class="auth-form-buttons">
+                            <button class="auth-form-button auth-form-cancel">Cancel</button>
+                            <button class="auth-form-button auth-form-submit">Sign Up</button>
+                        </div>
+                        <div class="auth-form-message"></div>
+                        <div class="auth-form-switch" onclick="switchAuth('signin')">Already have an account? Sign in</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -844,8 +1009,6 @@
         const timeEl = document.getElementById('time');
         const arrow = document.getElementById('menu-arrow');
         const contentArea = document.getElementById('content-area');
-        const closeButton = document.getElementById('close-button');
-        const minimizeButton = document.getElementById('minimize-button');
         const timezoneList = document.getElementById('timezone-list');
         const addBox = document.getElementById('add-timezone-box');
         const timezoneModal = document.getElementById('timezone-modal');
@@ -861,17 +1024,23 @@
         let selectedTimezones = new Set();
         let cityTimeData = [];
 
-        function updateTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            timeEl.textContent = timeStr;
-            updateCityTimes();
-        }
-
-        // Initialize time display when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            updateTime();
-            setInterval(updateTime, 1000);
+        // DOM Content Loaded - Only keep essential initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded');
+            
+            // Make sure timezone bar is hidden by default
+            const timezoneBar = document.getElementById('timezone-bar');
+            if (timezoneBar) {
+                timezoneBar.classList.remove('show');
+            }
+            
+            // Make sure widgets menu is hidden by default
+            const widgetsMenu = document.getElementById('widgets-menu');
+            if (widgetsMenu) {
+                widgetsMenu.classList.remove('show');
+            }
+            
+            console.log('Initialization complete');
         });
 
         function updateCityTimes() {
@@ -1167,6 +1336,221 @@
 
         // Start the slideshow once when DOM is ready
         document.addEventListener('DOMContentLoaded', startPhotoSlideshow);
+        
+        // Auth Form Functions
+        function showAuthForm(button, formType) {
+            // Hide all auth buttons and forms in this widget
+            const widget = button.closest('.widget-placeholder');
+            widget.querySelector('.auth-buttons').style.display = 'none';
+            widget.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+            
+            // Show the selected form
+            const form = widget.querySelector(`#${formType}-form`);
+            if (form) {
+                form.classList.add('active');
+                form.querySelector('input')?.focus();
+            }
+        }
+        
+        function hideAuthForm(formType) {
+            const form = document.querySelector(`#${formType}-form`);
+            if (form) {
+                form.classList.remove('active');
+                const widget = form.closest('.widget-placeholder');
+                if (widget) {
+                    widget.querySelector('.auth-buttons').style.display = 'flex';
+                }
+                // Clear form fields and messages
+                form.querySelectorAll('input').forEach(input => input.value = '');
+                const messageEl = form.querySelector('.auth-form-message');
+                if (messageEl) messageEl.textContent = '';
+            }
+        }
+        
+        function switchAuthForm(showFormType) {
+            // Find the widget containing the clicked switch link
+            const widget = event.target.closest('.widget-placeholder');
+            if (!widget) return;
+            
+            // Hide all forms and clear them
+            widget.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+                form.querySelectorAll('input').forEach(input => input.value = '');
+                const messageEl = form.querySelector('.auth-form-message');
+                if (messageEl) messageEl.textContent = '';
+            });
+            
+            // Show the requested form
+            const form = widget.querySelector(`#${showFormType}-form`);
+            if (form) {
+                form.classList.add('active');
+                form.querySelector('input')?.focus();
+            }
+        }
+        
+        function handleAuth(action) {
+            const widget = event.target.closest('.widget-placeholder');
+            if (!widget) return;
+            
+            const form = widget.querySelector(`#${action}-form`);
+            if (!form) return;
+            
+            const email = form.querySelector('.auth-email').value.trim();
+            const password = form.querySelector('.auth-password').value;
+            const messageEl = form.querySelector('.auth-form-message');
+            
+            // Basic validation
+            if (!email || !password) {
+                messageEl.textContent = 'Please fill in all fields';
+                return;
+            }
+            
+            if (action === 'signup') {
+                const confirmPassword = form.querySelector('.auth-confirm-password').value;
+                if (password !== confirmPassword) {
+                    messageEl.textContent = 'Passwords do not match';
+                    return;
+                }
+                if (password.length < 6) {
+                    messageEl.textContent = 'Password must be at least 6 characters';
+                    return;
+                }
+            }
+            
+            // Here you would typically make an API call to your authentication service
+            // For now, we'll just simulate a successful login
+            messageEl.textContent = action === 'signin' ? 'Signing in...' : 'Creating account...';
+            messageEl.style.color = '#4a90e2';
+            
+            // Simulate API call
+            setTimeout(() => {
+                // On success
+                messageEl.textContent = action === 'signin' ? 'Successfully signed in!' : 'Account created! Signing in...';
+                messageEl.style.color = '#7CFFB2';
+                
+                // Hide the form and show success state
+                setTimeout(() => {
+                    widget.querySelector('.not-signed-in').textContent = email;
+                    widget.querySelector('.auth-buttons').style.display = 'none';
+                    form.classList.remove('active');
+                    
+                    // Add sign out button
+                    const signOutBtn = document.createElement('button');
+                    signOutBtn.className = 'auth-button sign-out-button';
+                    signOutBtn.textContent = 'Sign Out';
+                    signOutBtn.onclick = () => {
+                        widget.querySelector('.not-signed-in').textContent = 'Not Signed In';
+                        widget.querySelector('.auth-buttons').style.display = 'flex';
+                        signOutBtn.remove();
+                        // Clear any form data
+                        widget.querySelectorAll('.auth-form').forEach(f => {
+                            f.querySelectorAll('input').forEach(input => input.value = '');
+                            const msg = f.querySelector('.auth-form-message');
+                            if (msg) msg.textContent = '';
+                        });
+                    };
+                    widget.querySelector('.lock-overlay').appendChild(signOutBtn);
+                }, 1000);
+            }, 1500);
+        }
+        
+        function switchAuth(showFormType) {
+            // Find the widget containing the clicked switch link
+            const widget = event.target.closest('.widget-placeholder');
+            if (!widget) return;
+            
+            // Hide all forms and clear them
+            widget.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+                form.querySelectorAll('input').forEach(input => input.value = '');
+                const messageEl = form.querySelector('.auth-form-message');
+                if (messageEl) messageEl.textContent = '';
+            });
+            
+            // Show the requested form
+            const form = widget.querySelector(`#${showFormType}-form`);
+            if (form) {
+                form.classList.add('active');
+                form.querySelector('input')?.focus();
+            }
+        }
+        
+        function handleAuth(action) {
+            const widget = event.target.closest('.widget-placeholder');
+            if (!widget) return;
+            
+            const form = widget.querySelector(`#${action}-form`);
+            if (!form) return;
+            
+            const email = form.querySelector('.auth-email').value.trim();
+            const password = form.querySelector('.auth-password').value;
+            const messageEl = form.querySelector('.auth-form-message');
+            
+            // Basic validation
+            if (!email || !password) {
+                messageEl.textContent = 'Please fill in all fields';
+                return;
+            }
+            
+            if (action === 'signup') {
+                const confirmPassword = form.querySelector('.auth-confirm-password').value;
+                if (password !== confirmPassword) {
+                    messageEl.textContent = 'Passwords do not match';
+                    return;
+                }
+                if (password.length < 6) {
+                    messageEl.textContent = 'Password must be at least 6 characters';
+                    return;
+                }
+            }
+            
+            // Here you would typically make an API call to your authentication service
+            // For now, we'll just simulate a successful login
+            messageEl.textContent = action === 'signin' ? 'Signing in...' : 'Creating account...';
+            messageEl.style.color = '#4a90e2';
+            
+            // Simulate API call
+            setTimeout(() => {
+                // On success
+                messageEl.textContent = action === 'signin' ? 'Successfully signed in!' : 'Account created! Signing in...';
+                messageEl.style.color = '#7CFFB2';
+                
+                // Hide the form and show success state
+                setTimeout(() => {
+                    widget.querySelector('.not-signed-in').textContent = email;
+                    widget.querySelector('.auth-buttons').style.display = 'none';
+                    form.classList.remove('active');
+                    
+                    // Add sign out button
+                    const signOutBtn = document.createElement('button');
+                    signOutBtn.className = 'auth-button sign-out-button';
+                    signOutBtn.textContent = 'Sign Out';
+                    signOutBtn.onclick = () => {
+                        widget.querySelector('.not-signed-in').textContent = 'Not Signed In';
+                        widget.querySelector('.auth-buttons').style.display = 'flex';
+                        signOutBtn.remove();
+                        // Clear any form data
+                        widget.querySelectorAll('.auth-form').forEach(f => {
+                            f.querySelectorAll('input').forEach(input => input.value = '');
+                            const msg = f.querySelector('.auth-form-message');
+                            if (msg) msg.textContent = '';
+                        });
+                    };
+                    widget.querySelector('.lock-overlay').appendChild(signOutBtn);
+                }, 1000);
+            }, 1500);
+        }
+        
+        // Allow form submission on Enter key
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const activeForm = document.querySelector('.auth-form.active');
+                if (activeForm) {
+                    const submitBtn = activeForm.querySelector('.auth-form-submit');
+                    if (submitBtn) submitBtn.click();
+                }
+            }
+        });
     </script>
 <script>
 // Basic 30:00 countdown for Live Stretching widget with join modal
@@ -1235,6 +1619,155 @@
   }
 })();
 </script>
-    <script type="module" src="./auth.js"></script>
+    <script>
+    // Authentication form handling
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show sign-in form
+        document.querySelectorAll('.sign-in-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const widget = this.closest('.widget-placeholder');
+                showAuthForm(widget, 'signin');
+            });
+        });
+
+        // Show sign-up form
+        document.querySelectorAll('.sign-up-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const widget = this.closest('.widget-placeholder');
+                showAuthForm(widget, 'signup');
+            });
+        });
+
+        // Handle form submissions
+        document.querySelectorAll('.auth-form-submit').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const form = this.closest('.auth-form');
+                const widget = form.closest('.widget-placeholder');
+                const isSignIn = form.id === 'signin-form';
+                
+                handleAuth(widget, form, isSignIn ? 'signin' : 'signup');
+            });
+        });
+
+        // Handle cancel buttons
+        document.querySelectorAll('.auth-form-cancel').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const form = this.closest('.auth-form');
+                const widget = form.closest('.widget-placeholder');
+                hideAuthForm(widget);
+            });
+        });
+
+        // Handle switch between sign-in and sign-up
+        document.querySelectorAll('.auth-form-switch').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const currentForm = this.closest('.auth-form');
+                const widget = currentForm.closest('.widget-placeholder');
+                const targetForm = this.textContent.toLowerCase().includes('sign up') ? 'signup' : 'signin';
+                
+                hideAuthForm(widget);
+                showAuthForm(widget, targetForm);
+            });
+        });
+    });
+
+    // Show the appropriate auth form
+    function showAuthForm(widget, formType) {
+        // Hide all auth buttons and forms
+        widget.querySelector('.auth-buttons').style.display = 'none';
+        widget.querySelectorAll('.auth-form').forEach(form => form.style.display = 'none');
+        
+        // Show the requested form
+        const form = widget.querySelector(`#${formType}-form`);
+        if (form) {
+            form.style.display = 'block';
+            form.querySelector('input')?.focus();
+        }
+    }
+
+    // Hide auth form and show buttons
+    function hideAuthForm(widget) {
+        widget.querySelector('.auth-buttons').style.display = 'flex';
+        widget.querySelectorAll('.auth-form').forEach(form => {
+            form.style.display = 'none';
+            // Clear form fields
+            form.querySelectorAll('input').forEach(input => input.value = '');
+            // Clear any error messages
+            const messageEl = form.querySelector('.auth-form-message');
+            if (messageEl) messageEl.textContent = '';
+        });
+    }
+
+    // Handle form submission
+    function handleAuth(widget, form, action) {
+        const email = form.querySelector('.auth-email').value.trim();
+        const password = form.querySelector('.auth-password').value;
+        const messageEl = form.querySelector('.auth-form-message');
+        
+        // Basic validation
+        if (!email || !password) {
+            showMessage(messageEl, 'Please fill in all fields', 'error');
+            return;
+        }
+        
+        if (action === 'signup') {
+            const confirmPassword = form.querySelector('.auth-confirm-password').value;
+            if (password !== confirmPassword) {
+                showMessage(messageEl, 'Passwords do not match', 'error');
+                return;
+            }
+            if (password.length < 6) {
+                showMessage(messageEl, 'Password must be at least 6 characters', 'error');
+                return;
+            }
+        }
+        
+        // Simulate API call
+        showMessage(messageEl, action === 'signin' ? 'Signing in...' : 'Creating account...', 'info');
+        
+        setTimeout(() => {
+            // On success
+            showMessage(messageEl, 
+                action === 'signin' ? 'Successfully signed in!' : 'Account created!', 
+                'success'
+            );
+            
+            // Update UI for signed-in state
+            widget.querySelector('.not-signed-in').textContent = email;
+            widget.querySelector('.auth-buttons').style.display = 'none';
+            form.style.display = 'none';
+            
+            // Add sign out button
+            const signOutBtn = document.createElement('button');
+            signOutBtn.className = 'auth-button sign-out-button';
+            signOutBtn.textContent = 'Sign Out';
+            signOutBtn.onclick = () => {
+                widget.querySelector('.not-signed-in').textContent = 'Not Signed In';
+                widget.querySelector('.auth-buttons').style.display = 'flex';
+                signOutBtn.remove();
+                // Clear any form data
+                widget.querySelectorAll('.auth-form').forEach(f => {
+                    f.querySelectorAll('input').forEach(input => input.value = '');
+                    const msg = f.querySelector('.auth-form-message');
+                    if (msg) msg.textContent = '';
+                });
+            };
+            widget.querySelector('.lock-overlay').appendChild(signOutBtn);
+        }, 1000);
+    }
+    
+    // Helper function to show messages
+    function showMessage(element, message, type) {
+        if (!element) return;
+        element.textContent = message;
+        element.style.color = type === 'error' ? '#ff6b6b' : 
+                             type === 'success' ? '#7CFFB2' : '#4a90e2';
+    }
+    </script>
+    <!-- Load renderer-fixed.js last to ensure DOM is ready -->
+    <script src="renderer-fixed.js"></script>
 </body>
 </html>

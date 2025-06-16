@@ -1,5 +1,64 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, screen } = require('electron');
 const path = require('path');
+
+// Firebase Admin SDK (Server-side)
+
+// Initialize Firebase Admin in the main process
+const initializeFirebaseAdmin = async () => {
+  try {
+    console.log('Initializing Firebase Admin...');
+    
+    // Dynamically import firebase-admin
+    const admin = require('firebase-admin');
+    
+    // Path to your service account key file
+    const serviceAccountPath = path.join(__dirname, 'clock-up-top-firebase-adminsdk-fbsvc-e27601c60a.json');
+    
+    // Check if the service account file exists
+    const fs = require('fs');
+    if (!fs.existsSync(serviceAccountPath)) {
+      throw new Error(`Service account file not found at: ${serviceAccountPath}`);
+    }
+    
+    // Read and parse the service account file
+    const serviceAccount = require(serviceAccountPath);
+    
+    // Initialize Firebase Admin
+    console.log('Initializing Firebase Admin app...');
+    const firebaseApp = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    
+    console.log('Firebase Admin initialized successfully');
+    
+    // Get Firestore instance
+    console.log('Initializing Firestore...');
+    const db = admin.firestore();
+    
+    // Configure Firestore settings
+    db.settings({
+      cacheSizeBytes: admin.firestore.CACHE_SIZE_UNLIMITED,
+      ignoreUndefinedProperties: true
+    });
+    
+    console.log('Firestore initialized successfully');
+    
+    // Make Firestore available globally
+    global.firestore = db;
+    return db;
+    
+  } catch (error) {
+    console.error('Error in initializeFirebaseAdmin:', error);
+    throw error; // Re-throw to handle in the calling function
+  }
+};
+
+// Only initialize Firebase Admin in the main process
+if (app) {
+  initializeFirebaseAdmin().catch(error => {
+    console.error('Failed to initialize Firebase Admin:', error);
+  });
+}
 
 let tray = null;
 let mainWindow = null;
@@ -52,7 +111,9 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      enableRemoteModule: false,
       webSecurity: true,
+      devTools: true,
       preload: path.join(__dirname, 'preload.js'),
       sandbox: true
     }
