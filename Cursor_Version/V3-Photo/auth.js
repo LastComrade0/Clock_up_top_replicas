@@ -312,6 +312,7 @@ function updateUIForAuthenticatedUser(user) {
     document.querySelectorAll('.widget-placeholder').forEach(widget => {
         const notSignedInEl = widget.querySelector('.not-signed-in');
         const authButtons = widget.querySelector('.auth-buttons');
+        const lockOverlay = widget.querySelector('.lock-overlay');
         
         if (notSignedInEl) {
             // Display username if available, otherwise email
@@ -329,14 +330,13 @@ function updateUIForAuthenticatedUser(user) {
             form.style.display = 'none';
         });
         
-        // Add sign out button if it doesn't exist
-        if (!widget.querySelector('.sign-out-button')) {
-            const signOutBtn = document.createElement('button');
-            signOutBtn.className = 'auth-button sign-out-button';
-            signOutBtn.textContent = 'Sign Out';
-            signOutBtn.onclick = () => firebase.auth.signOut();
-            widget.querySelector('.lock-overlay').appendChild(signOutBtn);
+        // Hide the lock overlay to show the actual widget content
+        if (lockOverlay) {
+            lockOverlay.style.display = 'none';
+            console.log('Lock overlay hidden for widget:', widget);
         }
+        
+        console.log('Widget authenticated:', widget);
     });
 }
 
@@ -345,6 +345,7 @@ function updateUIForSignedOutUser() {
     document.querySelectorAll('.widget-placeholder').forEach(widget => {
         const notSignedInEl = widget.querySelector('.not-signed-in');
         const authButtons = widget.querySelector('.auth-buttons');
+        const lockOverlay = widget.querySelector('.lock-overlay');
         
         if (notSignedInEl) {
             notSignedInEl.textContent = 'Not Signed In';
@@ -355,11 +356,13 @@ function updateUIForSignedOutUser() {
             authButtons.style.display = 'flex';
         }
         
-        // Remove sign out button if it exists
-        const signOutBtn = widget.querySelector('.sign-out-button');
-        if (signOutBtn) {
-            signOutBtn.remove();
+        // Show the lock overlay again
+        if (lockOverlay) {
+            lockOverlay.style.display = 'block';
+            console.log('Lock overlay shown for widget:', widget);
         }
+        
+        console.log('Widget signed out:', widget);
     });
 }
 
