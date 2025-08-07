@@ -96,6 +96,18 @@
     <script src="auth.js"></script>
     <script src="user-management.js"></script>
     <script src="test-user-management.js"></script>
+    <script src="field-connection-test.js"></script>
+    
+    <script>
+        console.log('=== MAIN HTML SCRIPT LOADED ===');
+        console.log('Timestamp:', new Date().toISOString());
+        console.log('DOM ready state:', document.readyState);
+        
+        // Test if basic elements exist
+        console.log('Clock element:', !!document.getElementById('clock'));
+        console.log('Sign-up form:', !!document.getElementById('signup-form'));
+        console.log('Auth buttons:', document.querySelectorAll('.auth-form-submit').length);
+    </script>
     <style>
         * {
             margin: 0;
@@ -932,7 +944,7 @@
                         <button class="auth-button sign-up-button">Sign Up</button>
                     </div>
                     <div id="signin-form" class="auth-form">
-                        <input type="email" class="auth-email" placeholder="Email">
+                        <input type="text" class="auth-username" placeholder="Username">
                         <input type="password" class="auth-password" placeholder="Password">
                         <div class="auth-form-buttons">
                             <button class="auth-form-button auth-form-cancel">Cancel</button>
@@ -942,6 +954,7 @@
                         <div class="auth-form-switch" onclick="switchAuth('signup')">Don't have an account? Sign up</div>
                     </div>
                     <div id="signup-form" class="auth-form">
+                        <input type="text" class="auth-username" placeholder="Username">
                         <input type="email" class="auth-email" placeholder="Email">
                         <input type="password" class="auth-password" placeholder="Password">
                         <input type="password" class="auth-confirm-password" placeholder="Confirm Password">
@@ -980,7 +993,7 @@
                         <button class="auth-button sign-up-button">Sign Up</button>
                     </div>
                     <div id="signin-form" class="auth-form">
-                        <input type="email" class="auth-email" placeholder="Email">
+                        <input type="text" class="auth-username" placeholder="Username">
                         <input type="password" class="auth-password" placeholder="Password">
                         <div class="auth-form-buttons">
                             <button class="auth-form-button auth-form-cancel">Cancel</button>
@@ -990,6 +1003,7 @@
                         <div class="auth-form-switch" onclick="switchAuth('signup')">Don't have an account? Sign up</div>
                     </div>
                     <div id="signup-form" class="auth-form">
+                        <input type="text" class="auth-username" placeholder="Username">
                         <input type="email" class="auth-email" placeholder="Email">
                         <input type="password" class="auth-password" placeholder="Password">
                         <input type="password" class="auth-confirm-password" placeholder="Confirm Password">
@@ -1038,6 +1052,8 @@
         }
         const timeEl = document.getElementById('time');
         const arrow = document.getElementById('menu-arrow');
+        const closeButton = document.getElementById('close-button');
+        const minimizeButton = document.getElementById('minimize-button');
         console.log('Arrow element found:', arrow);
         if (arrow) {
             console.log('Arrow element properties:', {
@@ -1539,71 +1555,7 @@
             }
         }
         
-        function handleAuth(action) {
-            const widget = event.target.closest('.widget-placeholder');
-            if (!widget) return;
-            
-            const form = widget.querySelector(`#${action}-form`);
-            if (!form) return;
-            
-            const email = form.querySelector('.auth-email').value.trim();
-            const password = form.querySelector('.auth-password').value;
-            const messageEl = form.querySelector('.auth-form-message');
-            
-            // Basic validation
-            if (!email || !password) {
-                messageEl.textContent = 'Please fill in all fields';
-                return;
-            }
-            
-            if (action === 'signup') {
-                const confirmPassword = form.querySelector('.auth-confirm-password').value;
-                if (password !== confirmPassword) {
-                    messageEl.textContent = 'Passwords do not match';
-                    return;
-                }
-                if (password.length < 6) {
-                    messageEl.textContent = 'Password must be at least 6 characters';
-                    return;
-                }
-            }
-            
-            // Here you would typically make an API call to your authentication service
-            // For now, we'll just simulate a successful login
-            messageEl.textContent = action === 'signin' ? 'Signing in...' : 'Creating account...';
-            messageEl.style.color = '#4a90e2';
-            
-            // Simulate API call
-            setTimeout(() => {
-                // On success
-                messageEl.textContent = action === 'signin' ? 'Successfully signed in!' : 'Account created! Signing in...';
-                messageEl.style.color = '#7CFFB2';
-                
-                // Hide the form and show success state
-                setTimeout(() => {
-                    widget.querySelector('.not-signed-in').textContent = email;
-                    widget.querySelector('.auth-buttons').style.display = 'none';
-                    form.classList.remove('active');
-                    
-                    // Add sign out button
-                    const signOutBtn = document.createElement('button');
-                    signOutBtn.className = 'auth-button sign-out-button';
-                    signOutBtn.textContent = 'Sign Out';
-                    signOutBtn.onclick = () => {
-                        widget.querySelector('.not-signed-in').textContent = 'Not Signed In';
-                        widget.querySelector('.auth-buttons').style.display = 'flex';
-                        signOutBtn.remove();
-                        // Clear any form data
-                        widget.querySelectorAll('.auth-form').forEach(f => {
-                            f.querySelectorAll('input').forEach(input => input.value = '');
-                            const msg = f.querySelector('.auth-form-message');
-                            if (msg) msg.textContent = '';
-                        });
-                    };
-                    widget.querySelector('.lock-overlay').appendChild(signOutBtn);
-                }, 1000);
-            }, 1500);
-        }
+        // OLD handleAuth function removed - now handled in auth.js
         
         function switchAuth(showFormType) {
             // Find the widget containing the clicked switch link
@@ -1626,72 +1578,6 @@
             }
         }
         
-        function handleAuth(action) {
-            const widget = event.target.closest('.widget-placeholder');
-            if (!widget) return;
-            
-            const form = widget.querySelector(`#${action}-form`);
-            if (!form) return;
-            
-            const email = form.querySelector('.auth-email').value.trim();
-            const password = form.querySelector('.auth-password').value;
-            const messageEl = form.querySelector('.auth-form-message');
-            
-            // Basic validation
-            if (!email || !password) {
-                messageEl.textContent = 'Please fill in all fields';
-                return;
-            }
-            
-            if (action === 'signup') {
-                const confirmPassword = form.querySelector('.auth-confirm-password').value;
-                if (password !== confirmPassword) {
-                    messageEl.textContent = 'Passwords do not match';
-                    return;
-                }
-                if (password.length < 6) {
-                    messageEl.textContent = 'Password must be at least 6 characters';
-                    return;
-                }
-            }
-            
-            // Here you would typically make an API call to your authentication service
-            // For now, we'll just simulate a successful login
-            messageEl.textContent = action === 'signin' ? 'Signing in...' : 'Creating account...';
-            messageEl.style.color = '#4a90e2';
-            
-            // Simulate API call
-            setTimeout(() => {
-                // On success
-                messageEl.textContent = action === 'signin' ? 'Successfully signed in!' : 'Account created! Signing in...';
-                messageEl.style.color = '#7CFFB2';
-                
-                // Hide the form and show success state
-                setTimeout(() => {
-                    widget.querySelector('.not-signed-in').textContent = email;
-                    widget.querySelector('.auth-buttons').style.display = 'none';
-                    form.classList.remove('active');
-                    
-                    // Add sign out button
-                    const signOutBtn = document.createElement('button');
-                    signOutBtn.className = 'auth-button sign-out-button';
-                    signOutBtn.textContent = 'Sign Out';
-                    signOutBtn.onclick = () => {
-                        widget.querySelector('.not-signed-in').textContent = 'Not Signed In';
-                        widget.querySelector('.auth-buttons').style.display = 'flex';
-                        signOutBtn.remove();
-                        // Clear any form data
-                        widget.querySelectorAll('.auth-form').forEach(f => {
-                            f.querySelectorAll('input').forEach(input => input.value = '');
-                            const msg = f.querySelector('.auth-form-message');
-                            if (msg) msg.textContent = '';
-                        });
-                    };
-                    widget.querySelector('.lock-overlay').appendChild(signOutBtn);
-                }, 1000);
-            }, 1500);
-        }
-        
         // Allow form submission on Enter key
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -1702,6 +1588,25 @@
                 }
             }
         });
+
+        // Note: Auth form event listeners are handled in auth.js
+        // This prevents duplicate event listeners
+        
+        // Test function to verify sign-up button works
+        function testSignUpButton() {
+            console.log('Testing sign-up button functionality...');
+            const signUpButtons = document.querySelectorAll('.auth-form-submit');
+            console.log('Found sign-up buttons:', signUpButtons.length);
+            
+            signUpButtons.forEach((button, index) => {
+                console.log(`Button ${index}:`, button);
+                console.log(`Button text:`, button.textContent);
+                console.log(`Button classes:`, button.className);
+            });
+        }
+        
+        // Run test after DOM loads
+        document.addEventListener('DOMContentLoaded', testSignUpButton);
     </script>
 <script>
 // Basic 30:00 countdown for Live Stretching widget with join modal
@@ -1852,63 +1757,8 @@
         });
     }
 
-    // Handle form submission
-    function handleAuth(widget, form, action) {
-        const email = form.querySelector('.auth-email').value.trim();
-        const password = form.querySelector('.auth-password').value;
-        const messageEl = form.querySelector('.auth-form-message');
-        
-        // Basic validation
-        if (!email || !password) {
-            showMessage(messageEl, 'Please fill in all fields', 'error');
-            return;
-        }
-        
-        if (action === 'signup') {
-            const confirmPassword = form.querySelector('.auth-confirm-password').value;
-            if (password !== confirmPassword) {
-                showMessage(messageEl, 'Passwords do not match', 'error');
-                return;
-            }
-            if (password.length < 6) {
-                showMessage(messageEl, 'Password must be at least 6 characters', 'error');
-                return;
-            }
-        }
-        
-        // Simulate API call
-        showMessage(messageEl, action === 'signin' ? 'Signing in...' : 'Creating account...', 'info');
-        
-        setTimeout(() => {
-            // On success
-            showMessage(messageEl, 
-                action === 'signin' ? 'Successfully signed in!' : 'Account created!', 
-                'success'
-            );
-            
-            // Update UI for signed-in state
-            widget.querySelector('.not-signed-in').textContent = email;
-            widget.querySelector('.auth-buttons').style.display = 'none';
-            form.style.display = 'none';
-            
-            // Add sign out button
-            const signOutBtn = document.createElement('button');
-            signOutBtn.className = 'auth-button sign-out-button';
-            signOutBtn.textContent = 'Sign Out';
-            signOutBtn.onclick = () => {
-                widget.querySelector('.not-signed-in').textContent = 'Not Signed In';
-                widget.querySelector('.auth-buttons').style.display = 'flex';
-                signOutBtn.remove();
-                // Clear any form data
-                widget.querySelectorAll('.auth-form').forEach(f => {
-                    f.querySelectorAll('input').forEach(input => input.value = '');
-                    const msg = f.querySelector('.auth-form-message');
-                    if (msg) msg.textContent = '';
-                });
-            };
-            widget.querySelector('.lock-overlay').appendChild(signOutBtn);
-        }, 1000);
-    }
+    // Handle form submission - REMOVED OLD FUNCTION
+    // The handleAuth function is now defined in auth.js
     
     // Helper function to show messages
     function showMessage(element, message, type) {

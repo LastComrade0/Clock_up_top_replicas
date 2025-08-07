@@ -57,10 +57,13 @@ class UserManager {
 
     // Hash password using SHA-256
     hashPassword(password) {
-        // Use crypto-js if available, otherwise fallback to simple hash
+        // Use crypto-js for consistent hashing
         if (typeof CryptoJS !== 'undefined') {
-            return CryptoJS.SHA256(password).toString();
+            const hash = CryptoJS.SHA256(password).toString();
+            console.log('UserManager: Password hashed with CryptoJS:', hash.substring(0, 20) + '...');
+            return hash;
         } else {
+            console.error('CryptoJS not available, using fallback hash');
             // Fallback to simple hash function
             let hash = 0;
             for (let i = 0; i < password.length; i++) {
@@ -81,7 +84,8 @@ class UserManager {
     // Register new user
     async registerUser(email, password, username) {
         try {
-            console.log('Registering new user:', email);
+            console.log('=== USER MANAGER REGISTRATION ===');
+            console.log('Registering new user:', { email, username, password: '***' });
 
             // Check if user already exists
             const existingUser = this.users.find(user => user.email === email);
@@ -101,8 +105,30 @@ class UserManager {
             };
 
             // Add to Firebase
-            const userRef = window.firebase.firestore.collection(this.collectionName);
-            const docRef = await window.firebase.firestore.addDoc(userRef, newUser);
+            console.log('Submitting to Firebase collection:', this.collectionName);
+            console.log('User data to submit:', { ...newUser, password_hash: '***' });
+            console.log('Firebase available:', !!window.firebase);
+            console.log('Firestore available:', !!window.firebase.firestore);
+            
+            try {
+                const userRef = window.firebase.firestore.collection(this.collectionName);
+                console.log('Collection reference created:', userRef);
+                console.log('Collection path:', this.collectionName);
+                
+                // Test if we can access the collection
+                console.log('Testing collection access...');
+                const testSnapshot = await window.firebase.firestore.getDocs(userRef);
+                console.log('Collection access test successful, existing docs:', testSnapshot.size);
+                
+                const docRef = await window.firebase.firestore.addDoc(userRef, newUser);
+                console.log('Firebase submission successful, document ID:', docRef.id);
+            } catch (firebaseError) {
+                console.error('Firebase submission error:', firebaseError);
+                console.error('Error details:', firebaseError.message, firebaseError.code);
+                console.error('Error name:', firebaseError.name);
+                console.error('Full error object:', firebaseError);
+                throw firebaseError;
+            }
 
             // Add to local array
             this.users.push({
@@ -110,7 +136,8 @@ class UserManager {
                 ...newUser
             });
 
-            console.log('User registered successfully:', email);
+            console.log('✅ User registered successfully:', email);
+            console.log('✅ Added to local users array, total users:', this.users.length);
             return { success: true, userId: docRef.id };
         } catch (error) {
             console.error('Error registering user:', error);
@@ -119,12 +146,12 @@ class UserManager {
     }
 
     // Authenticate user
-    async authenticateUser(email, password) {
+    async authenticateUser(username, password) {
         try {
-            console.log('Authenticating user:', email);
+            console.log('Authenticating user:', username);
 
-            // Find user by email
-            const user = this.users.find(u => u.email === email);
+            // Find user by username
+            const user = this.users.find(u => u.user === username);
             if (!user) {
                 throw new Error('User not found');
             }
@@ -136,7 +163,7 @@ class UserManager {
 
             // Set current user
             this.currentUser = user;
-            console.log('User authenticated successfully:', email);
+            console.log('User authenticated successfully:', username);
             return { success: true, user: user };
         } catch (error) {
             console.error('Authentication error:', error);
@@ -167,8 +194,7 @@ class UserManager {
 
             // Update in Firebase
             const userRef = window.firebase.firestore.doc(
-                window.firebase.firestore.collection(this.collectionName), 
-                userId
+                `${this.collectionName}/${userId}`
             );
             await window.firebase.firestore.updateDoc(userRef, updates);
 
@@ -193,8 +219,7 @@ class UserManager {
 
             // Delete from Firebase
             const userRef = window.firebase.firestore.doc(
-                window.firebase.firestore.collection(this.collectionName), 
-                userId
+                `${this.collectionName}/${userId}`
             );
             await window.firebase.firestore.deleteDoc(userRef);
 

@@ -115,7 +115,7 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       webSecurity: true,
-      devTools: false,
+      devTools: true,
       preload: path.join(__dirname, 'preload.js'),
       sandbox: true
     }
@@ -130,6 +130,9 @@ function createWindow() {
   
   // Remove menu bar
   mainWindow.setMenuBarVisibility(false);
+  
+  // Open DevTools by default
+  mainWindow.webContents.openDevTools();
 
   // Create tray icon
   tray = new Tray(path.join(__dirname, 'clock_icon.png'));
