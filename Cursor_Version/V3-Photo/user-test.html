@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>User Management Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .user-list {
+            margin-top: 20px;
+        }
+        .user-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .current-user {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>User Management Test</h1>
+        
+        <!-- Firebase Configuration -->
+        <div class="section">
+            <h2>Firebase Status</h2>
+            <div id="firebase-status">Checking Firebase connection...</div>
+        </div>
+
+        <!-- User Registration -->
+        <div class="section">
+            <h2>Register New User</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="reg-email">Email:</label>
+                    <input type="email" id="reg-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-username">Username:</label>
+                    <input type="text" id="reg-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password:</label>
+                    <input type="password" id="reg-password" required>
+                </div>
+                <button type="submit">Register User</button>
+            </form>
+            <div id="register-result"></div>
+        </div>
+
+        <!-- User Authentication -->
+        <div class="section">
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email:</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password:</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit">Login</button>
+                <button type="button" id="logout-btn" style="background: #dc3545;">Logout</button>
+            </form>
+            <div id="login-result"></div>
+        </div>
+
+        <!-- Current User -->
+        <div class="section">
+            <h2>Current User</h2>
+            <div id="current-user">Not logged in</div>
+        </div>
+
+        <!-- User List -->
+        <div class="section">
+            <h2>All Users</h2>
+            <button id="refresh-users">Refresh Users</button>
+            <div id="user-list" class="user-list"></div>
+        </div>
+
+        <!-- Test Functions -->
+        <div class="section">
+            <h2>Test Functions</h2>
+            <button id="test-hash">Test Password Hashing</button>
+            <button id="test-load">Test Load Users</button>
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged
+        } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc,
+            updateDoc,
+            serverTimestamp,
+            collection,
+            addDoc,
+            query,
+            where,
+            getDocs
+        } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdOU-zAho-3PKdHOq65I925QB4qPou2Bo",
+            authDomain: "shimmer-9166f.firebaseapp.com",
+            projectId: "shimmer-9166f",
+            storageBucket: "shimmer-9166f.firebasestorage.app",
+            messagingSenderId: "142779475573",
+            appId: "1:142779475573:web:6d372c1a5e9cb85ca8fa3c",
+            measurementId: "G-M8SD0MKTVW"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Make Firebase available globally
+        window.firebase = {
+            auth: {
+                signInWithEmailAndPassword: (email, password) => 
+                    signInWithEmailAndPassword(auth, email, password),
+                createUserWithEmailAndPassword: (email, password) => 
+                    createUserWithEmailAndPassword(auth, email, password),
+                signOut: () => signOut(auth),
+                onAuthStateChanged: (callback) => onAuthStateChanged(auth, callback)
+            },
+            firestore: {
+                collection: (path) => collection(db, path),
+                doc: (path) => doc(db, path),
+                setDoc: (docRef, data) => setDoc(docRef, data, { merge: true }),
+                getDoc: (docRef) => getDoc(docRef),
+                updateDoc: (docRef, data) => updateDoc(docRef, data),
+                addDoc: (collectionRef, data) => addDoc(collectionRef, data),
+                query: (collectionRef, ...queryConstraints) => 
+                    query(collectionRef, ...queryConstraints),
+                where: (fieldPath, opStr, value) => where(fieldPath, opStr, value),
+                getDocs: (query) => getDocs(query),
+                serverTimestamp: () => serverTimestamp()
+            }
+        };
+        
+        console.log('Firebase initialized');
+    </script>
+
+    <!-- Crypto-js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    
+    <!-- User Management -->
+    <script src="user-management.js"></script>
+    
+    <!-- Test Interface -->
+    <script>
+        // Wait for user manager to be ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Wait for user manager
+            const waitForUserManager = () => {
+                return new Promise((resolve) => {
+                    const check = () => {
+                        if (window.userManager) {
+                            resolve();
+                        } else {
+                            setTimeout(check, 100);
+                        }
+                    };
+                    check();
+                });
+            };
+
+            try {
+                await waitForUserManager();
+                console.log('User Manager ready, setting up UI');
+                setupUI();
+            } catch (error) {
+                console.error('Error setting up UI:', error);
+            }
+        });
+
+        function setupUI() {
+            // Firebase status
+            updateFirebaseStatus();
+            
+            // Register form
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+            
+            // Login form
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+            
+            // Refresh users
+            document.getElementById('refresh-users').addEventListener('click', loadUsers);
+            
+            // Test buttons
+            document.getElementById('test-hash').addEventListener('click', testHashing);
+            document.getElementById('test-load').addEventListener('click', testLoadUsers);
+            
+            // Load initial users
+            loadUsers();
+        }
+
+        function updateFirebaseStatus() {
+            const statusEl = document.getElementById('firebase-status');
+            if (window.firebase && window.firebase.firestore) {
+                statusEl.innerHTML = '<span class="success">✓ Firebase connected successfully</span>';
+            } else {
+                statusEl.innerHTML = '<span class="error">✗ Firebase not connected</span>';
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const resultEl = document.getElementById('register-result');
+            
+            try {
+                const email = document.getElementById('reg-email').value;
+                const username = document.getElementById('reg-username').value;
+                const password = document.getElementById('reg-password').value;
+                
+                const result = await window.userManager.registerUser(email, password, username);
+                resultEl.innerHTML = `<span class="success">User registered successfully! ID: ${result.userId}</span>`;
+                
+                // Clear form
+                e.target.reset();
+                
+                // Reload users
+                loadUsers();
+            } catch (error) {
+                resultEl.innerHTML = `<span class="error">Registration failed: ${error.message}</span>`;
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const resultEl = document.getElementById('login-result');
+            
+            try {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                
+                const result = await window.userManager.authenticateUser(email, password);
+                resultEl.innerHTML = `<span class="success">Login successful! Welcome ${result.user.user}</span>`;
+                
+                // Update current user display
+                updateCurrentUser();
+            } catch (error) {
+                resultEl.innerHTML = `<span class="error">Login failed: ${error.message}</span>`;
+            }
+        }
+
+        function handleLogout() {
+            window.userManager.logoutUser();
+            document.getElementById('login-result').innerHTML = '<span class="success">Logged out successfully</span>';
+            updateCurrentUser();
+        }
+
+        function updateCurrentUser() {
+            const currentUserEl = document.getElementById('current-user');
+            const user = window.userManager.getCurrentUser();
+            
+            if (user) {
+                currentUserEl.innerHTML = `
+                    <div class="user-item current-user">
+                        <strong>Email:</strong> ${user.email}<br>
+                        <strong>Username:</strong> ${user.user}<br>
+                        <strong>ID:</strong> ${user.id}
+                    </div>
+                `;
+            } else {
+                currentUserEl.innerHTML = '<span class="error">Not logged in</span>';
+            }
+        }
+
+        async function loadUsers() {
+            const userListEl = document.getElementById('user-list');
+            userListEl.innerHTML = 'Loading users...';
+            
+            try {
+                const users = window.userManager.getAllUsers();
+                const currentUser = window.userManager.getCurrentUser();
+                
+                if (users.length === 0) {
+                    userListEl.innerHTML = '<p>No users found</p>';
+                    return;
+                }
+                
+                userListEl.innerHTML = users.map(user => `
+                    <div class="user-item ${currentUser && currentUser.id === user.id ? 'current-user' : ''}">
+                        <strong>Email:</strong> ${user.email}<br>
+                        <strong>Username:</strong> ${user.user}<br>
+                        <strong>ID:</strong> ${user.id}<br>
+                        <strong>Password Hash:</strong> ${user.password_hash.substring(0, 20)}...
+                    </div>
+                `).join('');
+            } catch (error) {
+                userListEl.innerHTML = `<span class="error">Error loading users: ${error.message}</span>`;
+            }
+        }
+
+        function testHashing() {
+            const testResultsEl = document.getElementById('test-results');
+            const password = 'testpassword123';
+            const hash = window.userManager.hashPassword(password);
+            const verify = window.userManager.verifyPassword(password, hash);
+            
+            testResultsEl.innerHTML = `
+                <h3>Password Hashing Test Results:</h3>
+                <p><strong>Original Password:</strong> ${password}</p>
+                <p><strong>Hash:</strong> ${hash}</p>
+                <p><strong>Verification:</strong> ${verify ? '✓ Success' : '✗ Failed'}</p>
+            `;
+        }
+
+        async function testLoadUsers() {
+            const testResultsEl = document.getElementById('test-results');
+            
+            try {
+                const users = await window.userManager.loadUsersFromFirebase();
+                testResultsEl.innerHTML = `
+                    <h3>Load Users Test Results:</h3>
+                    <p><strong>Users Loaded:</strong> ${users.length}</p>
+                    <p><strong>Status:</strong> ✓ Success</p>
+                `;
+            } catch (error) {
+                testResultsEl.innerHTML = `
+                    <h3>Load Users Test Results:</h3>
+                    <p><strong>Status:</strong> ✗ Failed</p>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+
+        // Update current user display periodically
+        setInterval(updateCurrentUser, 1000);
+    </script>
+</body>
+</html> 

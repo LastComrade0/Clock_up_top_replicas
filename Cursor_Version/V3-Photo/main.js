@@ -55,9 +55,11 @@ const initializeFirebaseAdmin = async () => {
 
 // Only initialize Firebase Admin in the main process
 if (app) {
-  initializeFirebaseAdmin().catch(error => {
-    console.error('Failed to initialize Firebase Admin:', error);
-  });
+  // Temporarily disable Firebase Admin to test other functionality
+  console.log('Firebase Admin initialization disabled for testing');
+  // initializeFirebaseAdmin().catch(error => {
+  //   console.error('Failed to initialize Firebase Admin:', error);
+  // });
 }
 
 let tray = null;
@@ -113,7 +115,7 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       webSecurity: true,
-      devTools: true,
+      devTools: false,
       preload: path.join(__dirname, 'preload.js'),
       sandbox: true
     }
@@ -128,68 +130,6 @@ function createWindow() {
   
   // Remove menu bar
   mainWindow.setMenuBarVisibility(false);
-  
-  // Open DevTools in a separate window
-  const { screen } = require('electron');
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-  
-  // Calculate safe dimensions (80% of screen, centered)
-  const devToolsWidth = Math.min(1400, Math.round(width * 0.8));
-  const devToolsHeight = Math.min(900, Math.round(height * 0.9));
-  const devToolsX = Math.round((width - devToolsWidth) / 2);
-  const devToolsY = Math.round((height - devToolsHeight) / 2);
-  
-  // Create a new browser window for DevTools
-  const devToolsWindow = new BrowserWindow({
-    width: devToolsWidth,
-    height: devToolsHeight,
-    x: devToolsX,
-    y: devToolsY,
-    minWidth: 800,
-    minHeight: 600,
-    title: 'Clock App - Developer Tools',
-    show: false, // Don't show until ready
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      webSecurity: true,
-      devTools: true,
-      sandbox: true
-    }
-  });
-  
-  // Set up DevTools
-  mainWindow.webContents.setDevToolsWebContents(devToolsWindow.webContents);
-  mainWindow.webContents.openDevTools({ 
-    mode: 'detach',
-    activate: true,
-    mode: 'bottom'
-  });
-  
-  // Ensure DevTools window is properly shown
-  devToolsWindow.loadURL('about:blank').then(() => {
-    devToolsWindow.show();
-    // Focus the DevTools window
-    devToolsWindow.focus();
-  });
-  
-  // Handle window move/resize to keep it within bounds
-  const ensureWindowInBounds = () => {
-    const [winX, winY] = devToolsWindow.getPosition();
-    const [winWidth, winHeight] = devToolsWindow.getSize();
-    
-    let newX = Math.max(0, Math.min(winX, width - 100)); // Keep at least 100px visible
-    let newY = Math.max(0, Math.min(winY, height - 100));
-    
-    if (winX !== newX || winY !== newY) {
-      devToolsWindow.setPosition(newX, newY);
-    }
-  };
-  
-  // Ensure window stays in bounds when moved or resized
-  devToolsWindow.on('move', ensureWindowInBounds);
-  devToolsWindow.on('resize', ensureWindowInBounds);
 
   // Create tray icon
   tray = new Tray(path.join(__dirname, 'clock_icon.png'));

@@ -32,12 +32,13 @@
         
         // Your web app's Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyDj_OfcUeY355AgMFIutm1_ooA2eERz_D4",
-            authDomain: "clock-up-top.firebaseapp.com",
-            projectId: "clock-up-top",
-            storageBucket: "clock-up-top.firebasestorage.app",
-            messagingSenderId: "165135532100",
-            appId: "1:165135532100:web:6801b1fdd924d0314e7c11"
+            apiKey: "AIzaSyCdOU-zAho-3PKdHOq65I925QB4qPou2Bo",
+            authDomain: "shimmer-9166f.firebaseapp.com",
+            projectId: "shimmer-9166f",
+            storageBucket: "shimmer-9166f.firebasestorage.app",
+            messagingSenderId: "142779475573",
+            appId: "1:142779475573:web:6d372c1a5e9cb85ca8fa3c",
+            measurementId: "G-M8SD0MKTVW"
         };
         
         // Initialize Firebase
@@ -77,11 +78,24 @@
         console.log('Firebase initialized');
     </script>
     
+    <!-- Crypto-js for password hashing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    
+    <!-- Dayjs for timezone handling -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
+    <script>
+        // Initialize dayjs with timezone plugin
+        dayjs.extend(window.dayjs_plugin_utc);
+        dayjs.extend(window.dayjs_plugin_timezone);
+    </script>
+    
     <!-- App Scripts -->
     <script src="app.js"></script>
     <script src="auth.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
+    <script src="user-management.js"></script>
+    <script src="test-user-management.js"></script>
     <style>
         * {
             margin: 0;
@@ -166,21 +180,24 @@
             align-items: center;
             justify-content: center;
             transition: transform 0.3s ease;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        #menu-arrow:hover {
+            background: rgba(0, 0, 0, 0.2);
+            color: rgba(0, 0, 0, 0.8);
         }
 
         #menu-arrow.flipped {
             transform: rotate(180deg);
         }
 
-        #menu-arrow::before {
-            content: '';
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 6px solid rgba(0, 0, 0, 0.6);
-            transition: transform 0.3s ease;
-        }
+        /* Removed ::before pseudo-element since we're using actual text now */
 
         #menu-dots {
             position: absolute;
@@ -262,7 +279,7 @@
         }
 
         #timezone-bar {
-            display: none;
+            display: flex;
             align-items: center;
             background: rgba(180, 180, 180, 0.25); /* soft, shady, transparent gray */
             border: 2px solid #b0b0b0;
@@ -274,16 +291,26 @@
             box-sizing: border-box;
             align-items: center;
             justify-content: center;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-20px);
+            pointer-events: none;
         }
-        #menu-arrow.flipped {
-            transform: rotate(180deg);
-        }
+        
         #timezone-bar.show {
-            display: flex;
-            animation: fadeIn 0.3s ease;
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
         }
-        #timezone-bar.hide { display: none !important; }
+        
+        #timezone-bar.hide { 
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
         
         #timezone-list {
             display: flex;
@@ -869,7 +896,7 @@
         <span id="time">--:--</span>
         <div id="close-button" class="window-button">×</div>
         <div id="minimize-button" class="window-button">−</div>
-        <div id="menu-arrow"></div>
+        <div id="menu-arrow">▼</div>
     </div>
 
     <div id="widgets-menu">
@@ -1004,10 +1031,22 @@
     </div>
 
     <script>
-        dayjs.extend(dayjs_plugin_utc);
-        dayjs.extend(dayjs_plugin_timezone);
+        // Initialize dayjs with timezone plugin (if not already done)
+        if (typeof dayjs !== 'undefined') {
+            dayjs.extend(window.dayjs_plugin_utc);
+            dayjs.extend(window.dayjs_plugin_timezone);
+        }
         const timeEl = document.getElementById('time');
         const arrow = document.getElementById('menu-arrow');
+        console.log('Arrow element found:', arrow);
+        if (arrow) {
+            console.log('Arrow element properties:', {
+                display: arrow.style.display,
+                visibility: arrow.style.visibility,
+                opacity: arrow.style.opacity,
+                position: arrow.style.position
+            });
+        }
         const contentArea = document.getElementById('content-area');
         const timezoneList = document.getElementById('timezone-list');
         const addBox = document.getElementById('add-timezone-box');
@@ -1068,16 +1107,19 @@
         }
 
         async function loadAllTimezones() {
+            console.log('loadAllTimezones called');
             timezoneLoading.style.display = 'block';
             timezoneNoResults.style.display = 'none';
             timezoneError.style.display = 'none';
             timezoneListModal.innerHTML = '';
             try {
+                console.log('Fetching timezones from API...');
                 const response = await fetch('https://worldtimeapi.org/api/timezone');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 allTimezones = await response.json();
+                console.log('Timezones loaded successfully, count:', allTimezones.length);
                 filteredTimezones = allTimezones;
                 displayTimezones(filteredTimezones);
                 timezoneLoading.style.display = 'none';
@@ -1090,17 +1132,20 @@
         }
 
         function displayTimezones(timezones) {
+            console.log('displayTimezones called with', timezones.length, 'timezones');
             timezoneListModal.innerHTML = '';
             timezoneNoResults.style.display = (timezones.length === 0) ? 'block' : 'none';
             timezoneLoading.style.display = 'none';
             if (timezones.length > 0) {
-                timezones.forEach(tz => {
+                timezones.forEach((tz, index) => {
                     const div = document.createElement('div');
                     div.className = 'timezone-option';
                     div.textContent = tz.replace(/_/g, ' ');
                     div.onclick = () => selectTimezone(tz);
                     timezoneListModal.appendChild(div);
+                    if (index < 5) console.log('Added timezone option:', tz);
                 });
+                console.log('Displayed', timezones.length, 'timezone options');
             }
         }
 
@@ -1147,20 +1192,107 @@
             });
         }
 
-        arrow.addEventListener('click', () => {
-            arrow.classList.toggle('flipped');
-            document.getElementById('timezone-bar').classList.toggle('show');
-            if (window.electron && window.electron.ipcRenderer) {
-                window.electron.ipcRenderer.send('toggle-content');
+        // Improved arrow and timezone bar functionality
+        let timezoneBarManuallyShown = false; // Track manual show state
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const arrow = document.getElementById('menu-arrow');
+            const timezoneBar = document.getElementById('timezone-bar');
+            
+            console.log('=== ARROW DEBUGGING ===');
+            console.log('Arrow element found:', arrow);
+            console.log('Timezone bar element found:', timezoneBar);
+            console.log('Arrow text content:', arrow?.textContent);
+            console.log('Arrow classes:', arrow?.classList.toString());
+            console.log('Timezone bar classes:', timezoneBar?.classList.toString());
+            
+            if (arrow && timezoneBar) {
+                // Ensure timezone bar starts hidden with proper animation state
+                timezoneBar.classList.add('hide');
+                timezoneBar.classList.remove('show');
+                console.log('Initialized timezone bar as hidden with animation');
+                
+                console.log('Testing arrow click functionality...');
+                
+                arrow.addEventListener('click', (e) => {
+                    console.log('=== ARROW CLICKED ===');
+                    console.log('Event:', e);
+                    console.log('Arrow clicked!');
+                    
+                    // 1. Toggle flipped class on arrow
+                    const isFlipped = arrow.classList.toggle('flipped');
+                    console.log('Arrow flipped:', isFlipped);
+                    
+                    // 2. Change arrow text based on state
+                    arrow.textContent = isFlipped ? '▲' : '▼';
+                    console.log('Arrow text changed to:', arrow.textContent);
+                    
+                    // 3. Cleanly toggle timezone bar visibility with smooth animation
+                    const isVisible = timezoneBar.classList.contains('show');
+                    console.log('Timezone bar currently visible:', isVisible);
+                    console.log('Timezone bar classes before:', timezoneBar.classList.toString());
+                    
+                    if (isVisible) {
+                        // Hide timezone bar with slide-up and fade-out animation
+                        timezoneBar.classList.remove('show');
+                        timezoneBar.classList.add('hide');
+                        timezoneBarManuallyShown = false;
+                        console.log('Timezone bar HIDING with slide-up animation');
+                    } else {
+                        // Show timezone bar with slide-down and fade-in animation
+                        timezoneBar.classList.remove('hide');
+                        timezoneBar.classList.add('show');
+                        timezoneBarManuallyShown = true;
+                        console.log('Timezone bar SHOWING with slide-down animation');
+                    }
+                    
+                    // 4. Log final state for debugging
+                    console.log('Final arrow classes:', arrow.classList.toString());
+                    console.log('Final timezone bar classes:', timezoneBar.classList.toString());
+                    console.log('Timezone bar computed opacity:', window.getComputedStyle(timezoneBar).opacity);
+                    console.log('Timezone bar computed visibility:', window.getComputedStyle(timezoneBar).visibility);
+                    console.log('Timezone bar computed transform:', window.getComputedStyle(timezoneBar).transform);
+                    console.log('Timezone bar manually shown:', timezoneBarManuallyShown);
+                    
+                    // 5. Send IPC message for Electron
+                    if (window.electron && window.electron.ipcRenderer) {
+                        window.electron.ipcRenderer.send('toggle-content');
+                    }
+                });
+                
+                console.log('Arrow event listener attached successfully');
+                
+                // Test if arrow is clickable
+                console.log('Arrow clickable test:', arrow.onclick);
+                console.log('Arrow style pointer-events:', window.getComputedStyle(arrow).pointerEvents);
+                
+                // Test: Force show timezone bar after 2 seconds with animation
+                setTimeout(() => {
+                    console.log('=== FORCE SHOW TEST ===');
+                    timezoneBar.classList.remove('hide');
+                    timezoneBar.classList.add('show');
+                    console.log('Forced timezone bar to show with slide-down animation');
+                    console.log('Timezone bar opacity:', window.getComputedStyle(timezoneBar).opacity);
+                    console.log('Timezone bar visibility:', window.getComputedStyle(timezoneBar).visibility);
+                    console.log('Timezone bar transform:', window.getComputedStyle(timezoneBar).transform);
+                }, 2000);
+            } else {
+                console.error('Required elements not found:', {
+                    arrow: !!arrow,
+                    timezoneBar: !!timezoneBar
+                });
             }
         });
 
         addBox.addEventListener('click', () => {
+            console.log('+ button clicked, opening timezone modal');
             timezoneModal.classList.add('show');
             timezoneSearch.value = '';
             if (allTimezones.length === 0) {
+                console.log('Loading timezones for the first time');
                 loadAllTimezones();
             } else {
+                console.log('Using cached timezones, count:', allTimezones.length);
                 filteredTimezones = allTimezones;
                 displayTimezones(filteredTimezones);
             }
@@ -1204,13 +1336,25 @@
 
         function updateWidgetVisibility() {
             try {
-                // World Clock
-                if (timezoneBar) {
+                console.log('updateWidgetVisibility called');
+                console.log('widgetClock checked:', widgetClock?.checked);
+                console.log('Timezone bar manually shown:', timezoneBarManuallyShown);
+                
+                // World Clock - only update if not manually shown
+                if (timezoneBar && !timezoneBarManuallyShown) {
                     if (widgetClock?.checked) {
+                        // Show timezone bar with animation
                         timezoneBar.classList.remove('hide');
+                        timezoneBar.classList.add('show');
+                        console.log('Showing timezone-bar with animation (auto)');
                     } else {
+                        // Hide timezone bar with animation
+                        timezoneBar.classList.remove('show');
                         timezoneBar.classList.add('hide');
+                        console.log('Hiding timezone-bar with animation (auto)');
                     }
+                } else if (timezoneBar && timezoneBarManuallyShown) {
+                    console.log('Skipping timezone bar update - manually shown');
                 }
 
                 // Images (first widget)
@@ -1271,7 +1415,14 @@
             }
         }
         [widgetClock, widgetImages, widgetStretching].forEach(cb => {
-            cb.addEventListener('change', updateWidgetVisibility);
+            cb.addEventListener('change', () => {
+                // Reset manual state when widget settings change
+                if (cb === widgetClock) {
+                    timezoneBarManuallyShown = false;
+                    console.log('Reset timezone bar manual state due to widget change');
+                }
+                updateWidgetVisibility();
+            });
         });
         // Hide menu when clicking outside
         document.addEventListener('mousedown', (e) => {
