@@ -118,9 +118,83 @@ function setupUIListeners() {
     }
 }
 
-// Initialize UI listeners when DOM is fully loaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupUIListeners);
-} else {
-    setupUIListeners();
+// Initialize Daily.co integration
+async function initializeDailyIntegration() {
+    const joinButton = document.getElementById('join-stretch-session');
+    if (!joinButton) {
+        console.error('Join session button not found');
+        return;
+    }
+
+    console.log('Join session button found:', joinButton);
+    console.log('Daily.co manager available:', !!window.dailyStretchingManager);
+
+    // Initialize Daily.co
+    if (window.dailyStretchingManager) {
+        console.log('Initializing Daily.co manager...');
+        await window.dailyStretchingManager.initializeDaily();
+        console.log('Daily.co manager initialized successfully');
+    } else {
+        console.error('Daily.co manager not found! Make sure daily-streaming.js is loaded.');
+    }
+
+    // Handle join button click
+    joinButton.addEventListener('click', async () => {
+        try {
+            console.log('Join button clicked');
+            
+            // Show session UI immediately
+            const sessionUI = document.getElementById('stretching-session-ui');
+            if (sessionUI) {
+                sessionUI.style.display = 'flex';
+            }
+
+            // Join session (works for both authenticated and anonymous users)
+            await window.dailyStretchingManager.joinSession();
+        } catch (error) {
+            console.error('Failed to join session:', error);
+            alert('Failed to join stretching session. Please try again.');
+        }
+    });
 }
+
+// Check authentication state and update UI
+function checkAuthState() {
+    const joinButton = document.getElementById('join-stretch-session');
+    if (!joinButton) return;
+
+    const isAuthenticated = !!window.firebase?.auth?.currentUser;
+    console.log('Auth state check - isAuthenticated:', isAuthenticated);
+    console.log('Current user:', window.firebase?.auth?.currentUser);
+
+    // Always show the button, but change text based on auth status
+    joinButton.style.display = 'block';
+    joinButton.disabled = false; // Always enabled for anonymous access
+    
+    if (isAuthenticated) {
+        joinButton.style.opacity = '1';
+        joinButton.textContent = '🫂 Join Live Session';
+        joinButton.style.background = '#7CFFB2';
+    } else {
+        joinButton.style.opacity = '0.8';
+        joinButton.textContent = '🫂 Join Live Session (Anonymous)';
+        joinButton.style.background = '#FFB27C';
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    setupUIListeners();
+    initializeDailyIntegration();
+    
+    // Check auth state after a short delay to ensure Firebase is loaded
+    setTimeout(checkAuthState, 1000);
+    
+    // Also check auth state when Firebase auth state changes
+    if (window.firebase?.auth) {
+        window.firebase.auth.onAuthStateChanged((user) => {
+            console.log('Auth state changed:', user);
+            checkAuthState();
+        });
+    }
+});

@@ -338,6 +338,11 @@ function updateUIForAuthenticatedUser(user) {
         
         console.log('Widget authenticated:', widget);
     });
+
+    // Update join session button visibility
+    if (typeof checkAuthState === 'function') {
+        checkAuthState();
+    }
 }
 
 // Update UI for signed out user
@@ -364,6 +369,11 @@ function updateUIForSignedOutUser() {
         
         console.log('Widget signed out:', widget);
     });
+
+    // Update join session button visibility
+    if (typeof checkAuthState === 'function') {
+        checkAuthState();
+    }
 }
 
 // Helper function to show messages

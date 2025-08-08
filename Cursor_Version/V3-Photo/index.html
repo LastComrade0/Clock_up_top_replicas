@@ -1055,6 +1055,9 @@
                                 <li class="online-user">• Rob</li>
                             </ul>
                         </div>
+                        <button id="join-stretch-session" class="join-session-btn">
+                            🫂 Join Live Session
+                        </button>
                     </div>
                 </div>
                 <div class="lock-overlay">
@@ -1104,6 +1107,101 @@
           </div>
         </div>
     </div>
+
+    <!-- Daily.co Video Session UI -->
+    <div id="stretching-session-ui" class="video-session-ui">
+        <div class="video-session-container">
+            <div class="video-session-header">
+                <h2>Live Stretching Session</h2>
+                <div class="session-timer" id="session-timer">05:00</div>
+                <button class="close-session-btn" onclick="dailyStretchingManager.leaveSession()">✕</button>
+            </div>
+            <div id="daily-video-container"></div>
+            <div class="session-info">
+                <div class="participant-count">
+                    Participants: <span id="participant-count">1</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Video Session UI Styles */
+        .video-session-ui {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+        }
+
+        .video-session-container {
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .video-session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .video-session-header h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #7CFFB2;
+        }
+
+        .session-timer {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .close-session-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .close-session-btn:hover {
+            background: #ff6666;
+        }
+
+        #daily-video-container {
+            flex: 1;
+            background: #222;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .session-info {
+            color: white;
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+    </style>
 
     <!-- Timezone Selection Modal -->
     <div id="timezone-modal">
@@ -1885,6 +1983,10 @@
                              type === 'success' ? '#7CFFB2' : '#4a90e2';
     }
     </script>
+    
+    <!-- Load Daily.co streaming script -->
+    <script src="daily-streaming.js"></script>
+    
     <!-- Load renderer-fixed.js last to ensure DOM is ready -->
     <script src="renderer-fixed.js"></script>
 </body>
